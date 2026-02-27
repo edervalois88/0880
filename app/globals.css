@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-black: #191919;
+  --brand-white: #ffffff;
+  --brand-grey: #cac7c2;
+}
+
+body {
+  background-color: var(--brand-white);
+  color: var(--brand-black);
+}
+
+@layer utilities {
+  .animate-spin-slow {
+    animation: spin 60s linear infinite;
+  }
+}

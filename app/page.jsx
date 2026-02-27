@@ -1,202 +1,17 @@
+'use client'
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
+import Image from 'next/image';
+import BrandLogo from './components/BrandLogo';
+import Loader from './components/Loader';
+import { productsData, translations, fadeUp, staggerChildren, whatsappNumber } from './data/constants';
 
-// PRODUCTOS (Data with translations)
-// Models identified from PDF: Valentina, Love, Amelia, Inés
-const productsData = [
-  {
-    id: 1,
-    name: "Valentina",
-    price: 4500, // Estimated pricing
-    image: "/images/valentina.png", // Placeholder image path, user needs to upload
-    desc: {
-      es: "Elegancia atemporal con estructura definida y piel de grano superior.",
-      en: "Timeless elegance with defined structure and top-grain leather."
-    }
-  },
-  {
-    id: 2,
-    name: "Love",
-    price: 3800,
-    image: "/images/love.png",
-    desc: {
-      es: "Diseño romántico y compacto, ideal para ocasiones especiales.",
-      en: "Romantic and compact design, ideal for special occasions."
-    }
-  },
-  {
-    id: 3,
-    name: "Amelia",
-    price: 5200,
-    image: "/images/amelia.png",
-    desc: {
-      es: "Capacidad versátil con un toque bohemio de lujo.",
-      en: "Versatile capacity with a bohemian touch of luxury."
-    }
-  },
-  {
-    id: 4,
-    name: "Inés",
-    price: 4100,
-    image: "/images/ines.png",
-    desc: {
-      es: "Minimalismo sofisticado para la mujer moderna.",
-      en: "Sophisticated minimalism for the modern woman."
-    }
-  }
-];
-
-// TRANSLATIONS
-const translations = {
-  es: {
-    nav: { home: "Inicio", collection: "Colección", philosophy: "Filosofía", shop: "Shop" },
-    hero: { 
-      title1: "Arte en", 
-      title2: "cada puntada.", 
-      subtitle: "Lujo Silencioso • Hecho a Mano • México", 
-      cta: "Explorar Colección" 
-    },
-    origin: {
-      label: "Nuestro Manifiesto",
-      title1: "No diseñamos accesorios,",
-      title2: "esculpimos personalidad.",
-      desc: "Cada pieza de 0880 nace de la intersección entre el arte crudo y la elegancia funcional. Inspirados en la dualidad de la fuerza y la delicadeza, utilizamos pieles seleccionadas a mano.",
-      badge: "Hecho a mano"
-    },
-    savoir: {
-      t1: "Piel Genuina", d1: "Selección premium de curtidurías certificadas en León.",
-      t2: "Herrajes", d2: "Aleaciones de alta resistencia con baño de oro de 14k.",
-      t3: "Edición Limitada", d3: "Producción en lotes pequeños para garantizar exclusividad."
-    },
-    banner: {
-      slide1: { title: "Piel suave,", subtitle: "Detalles sublimes" },
-      slide2: { title: "Elige tu esencia", subtitle: "" } 
-    },
-    catalog: {
-      label: "La Colección · 2026",
-      btn: "Ver Detalle"
-    },
-    footer: {
-      text: "Bolsas artesanales que trascienden la moda para convertirse en legado. Diseñado en CDMX.",
-      explore: "Explorar",
-      social: "Social"
-    }
-  },
-  en: {
-    nav: { home: "Home", collection: "Collection", philosophy: "Philosophy", shop: "Shop" },
-    hero: { 
-      title1: "Art in", 
-      title2: "every stitch.", 
-      subtitle: "Quiet Luxury • Handmade • Mexico", 
-      cta: "Explore Collection" 
-    },
-    origin: {
-      label: "Our Manifesto",
-      title1: "We don't design accessories,",
-      title2: "we sculpt personality.",
-      desc: "Each 0880 piece is born from the intersection of raw art and functional elegance. Inspired by the duality of strength and delicacy, we use hand-selected leathers.",
-      badge: "Handmade"
-    },
-    savoir: {
-      t1: "Genuine Leather", d1: "Premium selection from certified tanneries in León.",
-      t2: "Hardware", d2: "High-resistance alloys with 14k gold plating.",
-      t3: "Limited Edition", d3: "Small batch production to guarantee exclusivity."
-    },
-    banner: {
-      slide1: { title: "Soft leather,", subtitle: "Thoughtful details" },
-      slide2: { title: "Choose your mood", subtitle: "" }
-    },
-    catalog: {
-      label: "The Collection · 2026",
-      btn: "View Detail"
-    },
-    footer: {
-      text: "Artisanal bags that transcend fashion to become legacy. Designed in CDMX.",
-      explore: "Explore",
-      social: "Social"
-    }
-  }
-};
-
-// MOTION VARIANTS
-const fadeUp = {
-  hidden: { opacity: 0, y: 50 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1] } }
-};
-
-const staggerChildren = {
-  visible: { transition: { staggerChildren: 0.2 } }
-};
-
-// COMPONENT: Animated SVG Logo
-function BrandLogo({ size = 100, color = "#191919", className = "" }) {
-  return (
-    <div className={`relative flex items-center justify-center ${className}`} style={{ width: size, height: size }}>
-      <motion.svg 
-        initial={{ rotate: 0 }}
-        animate={{ rotate: 360 }}
-        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-        className="absolute inset-0 w-full h-full" 
-        viewBox="0 0 100 100"
-      >
-        <defs>
-          <path id="circlePath" d="M 50, 50 m -37, 0 a 37,37 0 1,1 74,0 a 37,37 0 1,1 -74,0" />
-        </defs>
-        <text fill={color} fontSize="8.5" letterSpacing="2.5" fontWeight="bold" fontFamily="serif">
-          <textPath xlinkHref="#circlePath" startOffset="0%">
-            C E R O  O C H O  O C H E N T A  C E R O  O C H O  O C H E N T A
-          </textPath>
-        </text>
-      </motion.svg>
-      <span className="font-serif font-bold tracking-widest z-10" style={{ color, fontSize: size * 0.25 }}>0880</span>
-    </div>
-  );
-}
-
-// COMPONENT: Fancy Loader
-function Loader({ onComplete }) {
-  return (
-    <motion.div 
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#191919]"
-      initial={{ opacity: 1 }}
-      exit={{ opacity: 0, transition: { duration: 0.8, delay: 0.5 } }}
-    >
-      <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 1.5, ease: "easeInOut" }}
-        className="relative"
-      >
-        <BrandLogo size={150} color="#FFFFFF" />
-        
-        {/* Progress Line */}
-        <motion.div 
-          className="absolute -bottom-8 left-0 h-[1px] bg-white origin-left"
-          initial={{ width: 0 }}
-          animate={{ width: "100%" }}
-          transition={{ duration: 2, ease: "easeInOut" }}
-          onAnimationComplete={onComplete}
-        />
-      </motion.div>
-
-      {/* Split Screen Exit Animation */}
-      <motion.div 
-        className="absolute inset-0 bg-[#191919] z-[-1]"
-        exit={{ 
-          clipPath: "inset(0 0 0 0)",
-          transition: { duration: 0.1 }
-        }}
-      />
-    </motion.div>
-  );
-}
-
-function App() {
+export default function Home() {
   const [loading, setLoading] = useState(true);
   const [scrolled, setScrolled] = useState(false);
-  const [language, setLanguage] = useState('es'); // 'es' or 'en'
+  const [language, setLanguage] = useState('es');
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
-  const whatsappNumber = "5215633551085";
 
   const bannerData = [
     {
@@ -206,11 +21,10 @@ function App() {
       overlayClass: "bg-black/20"
     },
     {
-      // Dark Leather Texture
       image: "https://images.unsplash.com/photo-1601925260368-ae2f83cf8b7f?q=80&w=2500&auto=format&fit=crop",
       textKey: "slide2",
-      showLogo: true, // To match the requested "Choose your mood" style with logo
-      overlayClass: "bg-black/60" // Darker overlay for better contrast
+      showLogo: true,
+      overlayClass: "bg-black/60"
     }
   ];
 
@@ -221,21 +35,18 @@ function App() {
 
   const t = translations[language];
 
-  // Rotate Banner Images
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentBannerIndex((prev) => (prev + 1) % bannerData.length);
     }, 5000);
     return () => clearInterval(timer);
-  }, []);
+  }, [bannerData.length]);
 
-  // Map products based on language
   const products = productsData.map(p => ({
     ...p,
     desc: p.desc[language]
   }));
 
-  // Safety fallback to ensure user never gets stuck
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
@@ -265,7 +76,6 @@ function App() {
             animate={{ opacity: 1 }} 
             transition={{ duration: 1 }}
           >
-          {/* Custom Cursor Circle (Optional specific interaction, simplified here with hover effects) */}
           
           {/* Navbar */}
           <motion.div 
@@ -305,7 +115,6 @@ function App() {
             </div>
             
             <div className="navbar-end pr-4 md:pr-8 flex gap-6 items-center">
-              {/* Language Toggle */}
               <button 
                 onClick={toggleLanguage}
                 className="text-[10px] uppercase tracking-widest font-bold hover:text-brand-grey transition-colors"
@@ -329,14 +138,14 @@ function App() {
 
           {/* Hero Section */}
           <div id="hero" className="hero min-h-screen relative overflow-hidden flex items-center justify-center">
-            {/* Parallax Background */}
             <motion.div style={{ y: heroY, opacity: heroOpacity }} className="absolute inset-0 z-0">
-              {/* Dark Overlay for readability */}
               <div className="absolute inset-0 bg-black/50 z-10"></div>
-              <img 
+              <Image 
                 src="/images/Gemini_Generated_Image_fzyqpqfzyqpqfzyq.png" 
                 alt="Editorial Girl" 
-                className="w-full h-full object-cover object-center"
+                fill
+                className="object-cover object-center"
+                priority
               />
             </motion.div>
             
@@ -386,7 +195,7 @@ function App() {
               <div className="order-2 md:order-1 space-y-10">
                  <motion.span variants={fadeUp} className="text-xs font-bold tracking-[0.3em] uppercase text-brand-grey block">{t.origin.label}</motion.span>
                  <motion.h2 variants={fadeUp} className="text-4xl md:text-6xl font-serif text-brand-black leading-tight">
-                   "{t.origin.title1} <br/> <span className="italic text-brand-grey font-light">{t.origin.title2}"</span>
+                   &ldquo;{t.origin.title1} <br/> <span className="italic text-brand-grey font-light">{t.origin.title2}&rdquo;</span>
                  </motion.h2>
                  <motion.div variants={fadeUp} className="w-24 h-px bg-brand-black/20"></motion.div>
                  <motion.p variants={fadeUp} className="text-lg font-light leading-loose text-brand-black/70 tracking-wide text-justify">
@@ -398,14 +207,14 @@ function App() {
                  <motion.div 
                     whileHover={{ scale: 0.98 }}
                     transition={{ duration: 0.5 }}
-                    className="relative w-full max-w-sm"
+                    className="relative w-full max-w-sm aspect-[3/4]"
                  >
-                    <img 
+                    <Image 
                       src="/images/Gemini_Generated_Image_de5chode5chode5c.png" 
                       alt="Craftsmanship" 
-                      className="w-full h-auto shadow-2xl grayscale brightness-110 contrast-100" 
+                      fill
+                      className="object-cover shadow-2xl grayscale brightness-110 contrast-100" 
                     />
-                    {/* Floating Element */}
                     <motion.div 
                       animate={{ y: [0, -10, 0] }}
                       transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
@@ -419,11 +228,10 @@ function App() {
             </motion.div>
           </section>
 
-          {/* Savoir-Faire (Materials) Section - NEW */}
+          {/* Savoir-Faire Section */}
           <section className="py-24 px-6 bg-brand-grey/5 border-y border-brand-black/5">
              <div className="max-w-7xl mx-auto">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center divide-y md:divide-y-0 md:divide-x divide-brand-black/10">
-                   {/* Col 1 */}
                    <motion.div 
                      initial={{ opacity: 0, y: 20 }}
                      whileInView={{ opacity: 1, y: 0 }}
@@ -437,7 +245,6 @@ function App() {
                       </p>
                    </motion.div>
                    
-                   {/* Col 2 */}
                    <motion.div 
                      initial={{ opacity: 0, y: 20 }}
                      whileInView={{ opacity: 1, y: 0 }}
@@ -451,7 +258,6 @@ function App() {
                       </p>
                    </motion.div>
                    
-                   {/* Col 3 */}
                    <motion.div 
                      initial={{ opacity: 0, y: 20 }}
                      whileInView={{ opacity: 1, y: 0 }}
@@ -468,7 +274,7 @@ function App() {
              </div>
           </section>
 
-          {/* Details Banner Section (Carousel) */}
+          {/* Details Banner Section */}
           <section className="w-full h-[60vh] md:h-[85vh] relative bg-[#191919] overflow-hidden flex items-center justify-center">
              <motion.div 
                 style={{ scale: moodScale }}
@@ -483,25 +289,24 @@ function App() {
                     transition={{ duration: 2, ease: "easeInOut" }}
                     className="absolute inset-0"
                   >
-                     <img 
+                     <Image 
                       src={bannerData[currentBannerIndex].image}
                       alt="Mood Texture" 
-                      className="w-full h-full object-cover object-center"
+                      fill
+                      className="object-cover object-center"
                     />
                   </motion.div>
                 </AnimatePresence>
                 
-                {/* Overlay for better text readability */}
                 <div className={`absolute inset-0 mix-blend-multiply transition-all duration-1000 ${bannerData[currentBannerIndex].overlayClass}`}></div>
              </motion.div>
 
-             {/* Dynamic Text Overlay */}
              <AnimatePresence mode="wait">
                <motion.div 
                   key={currentBannerIndex}
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -30 }} // Exit animation for smooth transition
+                  exit={{ opacity: 0, y: -30 }}
                   transition={{ duration: 1, delay: 0.2 }}
                   className="relative z-10 text-center mix-blend-difference px-4"
                >
@@ -548,15 +353,13 @@ function App() {
                   className="group cursor-pointer"
                 >
                   <div className="relative overflow-hidden aspect-[3/4] bg-brand-grey/5 mb-6">
-                    <motion.img 
-                      whileHover={{ scale: 1.05 }}
-                      transition={{ duration: 0.6, ease: "easeOut" }}
+                    <Image 
                       src={product.image} 
-                      alt={product.name} 
-                      className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0" 
+                      alt={product.name}
+                      fill
+                      className="object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-600" 
                     />
                     
-                    {/* Animated Button Overlay */}
                     <motion.div 
                        initial={{ opacity: 0, y: 20 }}
                        whileHover={{ opacity: 1, y: 0 }}
@@ -612,7 +415,6 @@ function App() {
                 <div className="flex flex-col gap-6">
                   <span className="font-bold text-white mb-2 opacity-30">{t.footer.social}</span>
                   <div className="flex gap-4">
-                    {/* Instagram */}
                     <motion.a 
                       href="https://www.instagram.com/0880mx"
                       target="_blank"
@@ -626,7 +428,6 @@ function App() {
                       </svg>
                     </motion.a>
 
-                    {/* Facebook */}
                     <motion.a 
                       href="https://www.facebook.com/CeroOchoOchentaMX"
                       target="_blank"
@@ -640,7 +441,6 @@ function App() {
                       </svg>
                     </motion.a>
 
-                    {/* WhatsApp Footer */}
                     <motion.a 
                       href={`https://wa.me/${whatsappNumber}`}
                       target="_blank"
@@ -658,7 +458,7 @@ function App() {
               </div>
             </div>
             
-            <div className="absolute -bottom-24 -right-24 opacity-[0.02] select-none pointer-events-none origin-bottom-right animate-spin-slow" style={{animationDuration: '60s'}}>
+            <div className="absolute -bottom-24 -right-24 opacity-[0.02] select-none pointer-events-none origin-bottom-right animate-spin-slow">
                <BrandLogo size={800} color="#FFFFFF" />
             </div>
           </footer>
@@ -684,5 +484,3 @@ function App() {
     </div>
   );
 }
-
-export default App;
