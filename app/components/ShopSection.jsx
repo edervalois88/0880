@@ -129,7 +129,7 @@ const ShopSection = ({ products, translations, language, whatsappNumber }) => {
       >
         <div className="border-t border-b border-amber-600/20 py-8 px-6">
           <p className="text-sm font-serif italic text-brand-black/70 leading-relaxed mb-4">
-            "Cada bolsa es hecha con mucho corazón por artesanos y peleteros en León, Guanajuato"
+            &ldquo;Cada bolsa es hecha con mucho corazón por artesanos y peleteros en León, Guanajuato&rdquo;
           </p>
           <div className="flex items-center justify-center gap-4 text-[9px] uppercase tracking-[0.25em] text-brand-black/50">
             <span className="flex items-center gap-2">
