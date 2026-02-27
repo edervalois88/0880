@@ -6,6 +6,9 @@
   --brand-black: #191919;
   --brand-white: #ffffff;
   --brand-grey: #cac7c2;
+  --brand-terracotta: #c65d3b;
+  --brand-amber: #d97706;
+  --brand-copper: #b87333;
 }
 
 body {
@@ -17,4 +20,12 @@ body {
   .animate-spin-slow {
     animation: spin 60s linear infinite;
   }
+  
+  .text-gradient-mexican {
+    background: linear-gradient(135deg, #b87333 0%, #d97706 50%, #c65d3b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
 }
+

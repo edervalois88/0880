@@ -5,6 +5,7 @@ import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion'
 import Image from 'next/image';
 import BrandLogo from './components/BrandLogo';
 import Loader from './components/Loader';
+import ShopSection from './components/ShopSection';
 import { productsData, translations, fadeUp, staggerChildren, whatsappNumber } from './data/constants';
 
 export default function Home() {
@@ -331,62 +332,12 @@ export default function Home() {
           </section>
 
           {/* Catalog Grid */}
-          <section id="catalog" className="py-32 px-4 md:px-12 max-w-[1800px] mx-auto bg-white">
-            <motion.div 
-               initial={{ opacity: 0 }}
-               whileInView={{ opacity: 1 }}
-               viewport={{ once: true }}
-               className="text-center mb-24 relative"
-            >
-              <h2 className="text-sm font-bold tracking-[0.4em] uppercase text-brand-black inline-block z-10 bg-white px-6">{t.catalog.label}</h2>
-              <div className="absolute top-1/2 left-0 w-full h-px bg-brand-black/10 -z-10"></div>
-            </motion.div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {products.map((product, i) => (
-                <motion.div 
-                  key={product.id}
-                  initial={{ opacity: 0, y: 50 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1, duration: 0.8 }}
-                  className="group cursor-pointer"
-                >
-                  <div className="relative overflow-hidden aspect-[3/4] bg-brand-grey/5 mb-6">
-                    <Image 
-                      src={product.image} 
-                      alt={product.name}
-                      fill
-                      className="object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-600" 
-                    />
-                    
-                    <motion.div 
-                       initial={{ opacity: 0, y: 20 }}
-                       whileHover={{ opacity: 1, y: 0 }}
-                       className="absolute inset-0 bg-black/10 backdrop-blur-[1px] flex items-center justify-center p-4 transition-all duration-300"
-                    >
-                       <a 
-                        href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(`Hola 0880, me interesa el modelo ${product.name}.`)}`}
-                        target="_blank"
-                        rel="noreferrer" 
-                        className="bg-white text-black px-8 py-4 text-[10px] font-bold uppercase tracking-[0.25em] hover:bg-black hover:text-white transition-colors duration-300"
-                      >
-                        {t.catalog.btn}
-                      </a>
-                    </motion.div>
-                  </div>
-                  
-                  <div className="text-center space-y-2 px-2">
-                    <h3 className="font-serif text-xl text-brand-black tracking-wide">{product.name}</h3>
-                    <p className="text-[10px] text-brand-black/50 font-sans tracking-widest uppercase border-b border-transparent group-hover:border-black/20 inline-block pb-1 transition-all">{product.desc.substring(0, 30)}...</p>
-                    <div className="pt-2 text-sm font-bold tracking-widest text-brand-black">
-                      ${product.price.toLocaleString('es-MX')} MXN
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </section>
+          <ShopSection 
+            products={products}
+            translations={translations}
+            language={language}
+            whatsappNumber={whatsappNumber}
+          />
 
           {/* Footer */}
           <footer className="bg-[#111] text-brand-grey py-32 px-8 border-t border-white/5 relative overflow-hidden">
