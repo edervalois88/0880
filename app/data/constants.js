@@ -1,293 +1,708 @@
 // Catálogo completo 0880 - Piel 100% vacuna mexicana
 export const productsData = [
-  // COLECCIÓN VALENTINA - $4,200
   {
-    id: 1,
-    name: "Valentina",
-    collection: "Valentina",
-    price: 4200,
-    image: "/images/valentina.png",
-    color: "Camel",
-    design: "Bicho Alas",
-    desc: {
-      es: "Piel 100% vacuna, bordada a máquina (bicho alas), aro de metal",
-      en: "100% cowhide leather, machine embroidered (winged beetle), metal ring"
+    "id": 1,
+    "name": "Valentina",
+    "collection": "Valentina",
+    "price": 4200,
+    "image": "/images/extracted/page_1_img_1.png",
+    "color": "Camel",
+    "design": "Bicho alas",
+    "desc": {
+      "es": "Valentina  Bolsa de piel 100% vacuna  Bordada a máquina (bicho alas) Color camel  Aro de Metal  $4,200.00",
+      "en": "Valentina  Bolsa de piel 100% vacuna  Bordada a máquina (bicho alas) Color camel  Aro de Metal  $4,200.00"
     },
-    features: ["Piel 100% vacuna", "Bordada a máquina", "Aro de metal"]
+    "features": [
+      "Piel 100% vacuna"
+    ]
   },
   {
-    id: 2,
-    name: "Valentina",
-    collection: "Valentina",
-    price: 4200,
-    image: "/images/valentina.png",
-    color: "Vino",
-    design: "Sagrado Corazón",
-    desc: {
-      es: "Piel 100% vacuna, bordada a máquina (sagrado corazón), aro de metal",
-      en: "100% cowhide leather, machine embroidered (sacred heart), metal ring"
+    "id": 2,
+    "name": "Valentina",
+    "collection": "Valentina",
+    "price": 4200,
+    "image": "/images/extracted/page_2_img_1.jpeg",
+    "color": "Vino",
+    "design": "Sagrado corazón",
+    "desc": {
+      "es": "Bolsa de piel 100% vacuna  Bordada a máquina (Sagrado Corazón) Color Vino Aro de Metal  $4,200.00",
+      "en": "Bolsa de piel 100% vacuna  Bordada a máquina (Sagrado Corazón) Color Vino Aro de Metal  $4,200.00"
     },
-    features: ["Piel 100% vacuna", "Bordada a máquina", "Aro de metal"]
+    "features": [
+      "Piel 100% vacuna"
+    ]
   },
   {
-    id: 3,
-    name: "Valentina",
-    collection: "Valentina",
-    price: 4200,
-    image: "/images/valentina.png",
-    color: "Negro",
-    design: "Alas",
-    desc: {
-      es: "Piel 100% vacuna, bordada a máquina (alas), aro de metal",
-      en: "100% cowhide leather, machine embroidered (wings), metal ring"
+    "id": 3,
+    "name": "Valentina",
+    "collection": "Valentina",
+    "price": 4200,
+    "image": "/images/extracted/page_3_img_1.jpeg",
+    "color": "Negro",
+    "design": "Alas",
+    "desc": {
+      "es": "Bolsa de piel 100% vacuna  Bordada a máquina ( alas ) Color Negro Aro de Metal  $4,200.00",
+      "en": "Bolsa de piel 100% vacuna  Bordada a máquina ( alas ) Color Negro Aro de Metal  $4,200.00"
     },
-    features: ["Piel 100% vacuna", "Bordada a máquina", "Aro de metal"]
+    "features": [
+      "Piel 100% vacuna"
+    ]
   },
   {
-    id: 4,
-    name: "Valentina",
-    collection: "Valentina",
-    price: 4200,
-    image: "/images/valentina.png",
-    color: "Verde Olivo",
-    design: "Bicho Cuernos",
-    desc: {
-      es: "Piel 100% vacuna, bordada a máquina (bicho cuernos), aro de metal",
-      en: "100% cowhide leather, machine embroidered (horned beetle), metal ring"
+    "id": 4,
+    "name": "Valentina",
+    "collection": "Valentina",
+    "price": 4200,
+    "image": "/images/extracted/page_4_img_1.jpeg",
+    "color": "Verde olivo",
+    "design": "Bicho cuernos",
+    "desc": {
+      "es": "Bolsa de piel 100% vacuna  Bordada a máquina ( Bicho Cuernos ) Color Verde Olivo Aro de Metal  $4,200.00",
+      "en": "Bolsa de piel 100% vacuna  Bordada a máquina ( Bicho Cuernos ) Color Verde Olivo Aro de Metal  $4,200.00"
     },
-    features: ["Piel 100% vacuna", "Bordada a máquina", "Aro de metal"]
+    "features": [
+      "Piel 100% vacuna"
+    ]
   },
   {
-    id: 5,
-    name: "Valentina",
-    collection: "Valentina",
-    price: 4200,
-    image: "/images/valentina.png",
-    color: "Camel",
-    design: "Cruz",
-    desc: {
-      es: "Piel 100% vacuna, bordada a máquina (cruz), aro de metal",
-      en: "100% cowhide leather, machine embroidered (cross), metal ring"
+    "id": 5,
+    "name": "Valentina",
+    "collection": "Valentina",
+    "price": 4200,
+    "image": "/images/extracted/page_5_img_1.jpeg",
+    "color": "Vino",
+    "design": "Bicho alas",
+    "desc": {
+      "es": "Bolsa de piel 100% vacuna  Bordada a máquina ( Bicho alas ) Color Vino Aro de Metal  $4,200.00",
+      "en": "Bolsa de piel 100% vacuna  Bordada a máquina ( Bicho alas ) Color Vino Aro de Metal  $4,200.00"
     },
-    features: ["Piel 100% vacuna", "Bordada a máquina", "Aro de metal"]
-  },
-
-  // COLECCIÓN LOVE - $4,250
-  {
-    id: 6,
-    name: "Love",
-    collection: "Love",
-    price: 4250,
-    image: "/images/love.png",
-    color: "Negro",
-    design: "Alas",
-    desc: {
-      es: "Piel 100% vacuna, bordada a máquina (alas), olán corte láser, strap",
-      en: "100% cowhide leather, machine embroidered (wings), laser-cut ruffle, strap"
-    },
-    features: ["Piel 100% vacuna", "Olán corte láser", "Strap intercambiable"]
+    "features": [
+      "Piel 100% vacuna"
+    ]
   },
   {
-    id: 7,
-    name: "Love",
-    collection: "Love",
-    price: 4250,
-    image: "/images/love.png",
-    color: "Beige Tostado",
-    design: "Alas",
-    desc: {
-      es: "Piel 100% vacuna, bordada a máquina (alas), olán corte láser, strap",
-      en: "100% cowhide leather, machine embroidered (wings), laser-cut ruffle, strap"
+    "id": 6,
+    "name": "Valentina",
+    "collection": "Valentina",
+    "price": 4200,
+    "image": "/images/extracted/page_6_img_1.jpeg",
+    "color": "Negro",
+    "design": "Alas",
+    "desc": {
+      "es": "Bolsa de piel 100% vacuna  Bordada a máquina ( alas ) Color Negro Aro de Metal  $4,200.00",
+      "en": "Bolsa de piel 100% vacuna  Bordada a máquina ( alas ) Color Negro Aro de Metal  $4,200.00"
     },
-    features: ["Piel 100% vacuna", "Olán corte láser", "Strap intercambiable"]
+    "features": [
+      "Piel 100% vacuna"
+    ]
   },
   {
-    id: 8,
-    name: "Love",
-    collection: "Love",
-    price: 4250,
-    image: "/images/love.png",
-    color: "Café Espresso",
-    design: "Bicho Cuernos",
-    desc: {
-      es: "Piel 100% vacuna, bordada a máquina (bicho cuernos), olán corte láser, strap",
-      en: "100% cowhide leather, machine embroidered (horned beetle), laser-cut ruffle, strap"
+    "id": 7,
+    "name": "Valentina",
+    "collection": "Valentina",
+    "price": 4200,
+    "image": "/images/extracted/page_7_img_1.jpeg",
+    "color": "Camel",
+    "design": "Cruz",
+    "desc": {
+      "es": "Bolsa de piel 100% vacuna  Bordada a máquina ( Cruz ) Color Camel Aro de Metal  $4,200.00",
+      "en": "Bolsa de piel 100% vacuna  Bordada a máquina ( Cruz ) Color Camel Aro de Metal  $4,200.00"
     },
-    features: ["Piel 100% vacuna", "Olán corte láser", "Strap intercambiable"]
+    "features": [
+      "Piel 100% vacuna"
+    ]
   },
   {
-    id: 9,
-    name: "Love",
-    collection: "Love",
-    price: 4250,
-    image: "/images/love.png",
-    color: "Snake Print Camel Ahumado",
-    design: "Alas",
-    desc: {
-      es: "Piel 100% vacuna, bordada a máquina (alas), olán corte láser, strap",
-      en: "100% cowhide leather, machine embroidered (wings), laser-cut ruffle, strap"
+    "id": 8,
+    "name": "Valentina",
+    "collection": "Valentina",
+    "price": 4200,
+    "image": "/images/extracted/page_8_img_1.jpeg",
+    "color": "Negro",
+    "design": "Bicho cuernos",
+    "desc": {
+      "es": "Bolsa de piel 100% vacuna  Bordada a máquina ( Bicho Cuernos ) Color Negro Aro de Metal  $4,200.00",
+      "en": "Bolsa de piel 100% vacuna  Bordada a máquina ( Bicho Cuernos ) Color Negro Aro de Metal  $4,200.00"
     },
-    features: ["Piel 100% vacuna", "Olán corte láser", "Strap intercambiable"]
+    "features": [
+      "Piel 100% vacuna"
+    ]
   },
   {
-    id: 10,
-    name: "Love",
-    collection: "Love",
-    price: 4250,
-    image: "/images/love.png",
-    color: "Vainilla",
-    design: "Alas",
-    desc: {
-      es: "Piel 100% vacuna, bordada a máquina (alas), olán corte láser, strap",
-      en: "100% cowhide leather, machine embroidered (wings), laser-cut ruffle, strap"
+    "id": 9,
+    "name": "Valentina",
+    "collection": "Valentina",
+    "price": 4200,
+    "image": "/images/extracted/page_9_img_1.jpeg",
+    "color": "Vino",
+    "design": "Bicho alas",
+    "desc": {
+      "es": "Bolsa de piel 100% vacuna  Bordada a máquina ( Bicho alas ) Color Vino Aro de Metal  $4,200.00",
+      "en": "Bolsa de piel 100% vacuna  Bordada a máquina ( Bicho alas ) Color Vino Aro de Metal  $4,200.00"
     },
-    features: ["Piel 100% vacuna", "Olán corte láser", "Strap intercambiable"]
-  },
-
-  // COLECCIÓN AMELIA - $3,900
-  {
-    id: 11,
-    name: "Amelia",
-    collection: "Amelia",
-    price: 3900,
-    image: "/images/amelia.png",
-    color: "Negro",
-    design: "Mano de Fátima",
-    desc: {
-      es: "Piel 100% vacuna, bordada a máquina (mano de Fátima), strap liso y tréboles",
-      en: "100% cowhide leather, machine embroidered (Fatima's hand), plain & clover strap"
-    },
-    features: ["Piel 100% vacuna", "2 Straps incluidos", "Bordada a máquina"]
+    "features": [
+      "Piel 100% vacuna"
+    ]
   },
   {
-    id: 12,
-    name: "Amelia",
-    collection: "Amelia",
-    price: 3900,
-    image: "/images/amelia.png",
-    color: "Antimonio",
-    design: "Alas",
-    desc: {
-      es: "Piel 100% vacuna, bordada a máquina (alas), strap liso y tréboles",
-      en: "100% cowhide leather, machine embroidered (wings), plain & clover strap"
+    "id": 10,
+    "name": "Valentina",
+    "collection": "Valentina",
+    "price": 4200,
+    "image": "/images/extracted/page_10_img_1.jpeg",
+    "color": "Verde olivo",
+    "design": "Alas",
+    "desc": {
+      "es": "Bolsa de piel 100% vacuna  Bordada a máquina ( alas ) Color Verde Olivo  Aro de Metal  $4,200.00",
+      "en": "Bolsa de piel 100% vacuna  Bordada a máquina ( alas ) Color Verde Olivo  Aro de Metal  $4,200.00"
     },
-    features: ["Piel 100% vacuna", "2 Straps incluidos", "Bordada a máquina"]
+    "features": [
+      "Piel 100% vacuna"
+    ]
   },
   {
-    id: 13,
-    name: "Amelia",
-    collection: "Amelia",
-    price: 3900,
-    image: "/images/amelia.png",
-    color: "Negro",
-    design: "Alas Grises",
-    desc: {
-      es: "Piel 100% vacuna, bordada a máquina (alas grises), strap liso y tréboles",
-      en: "100% cowhide leather, machine embroidered (grey wings), plain & clover strap"
+    "id": 11,
+    "name": "Love",
+    "collection": "Love",
+    "price": 4250,
+    "image": "/images/extracted/page_11_img_1.png",
+    "color": "Negro",
+    "design": "Alas",
+    "desc": {
+      "es": "Love  Bolsa piel 100% vacuna Bordada a máquina (alas) Olán corte láser  Strap Color negro  $4,250.00",
+      "en": "Love  Bolsa piel 100% vacuna Bordada a máquina (alas) Olán corte láser  Strap Color negro  $4,250.00"
     },
-    features: ["Piel 100% vacuna", "2 Straps incluidos", "Bordada a máquina"]
+    "features": [
+      "Piel 100% vacuna"
+    ]
   },
   {
-    id: 14,
-    name: "Amelia",
-    collection: "Amelia",
-    price: 3900,
-    image: "/images/amelia.png",
-    color: "Blanco/Negro",
-    design: "Ojo Pestañas",
-    desc: {
-      es: "Piel 100% vacuna, bordada a máquina (ojo pestañas), strap liso y tréboles",
-      en: "100% cowhide leather, machine embroidered (eye lashes), plain & clover strap"
+    "id": 12,
+    "name": "Love",
+    "collection": "Love",
+    "price": 4250,
+    "image": "/images/extracted/page_12_img_1.jpeg",
+    "color": "Beige tostado",
+    "design": "Alas",
+    "desc": {
+      "es": "Bolsa piel 100% vacuna Bordada a máquina (alas) Olán corte láser  Strap Color beige tostado  $4,250.00",
+      "en": "Bolsa piel 100% vacuna Bordada a máquina (alas) Olán corte láser  Strap Color beige tostado  $4,250.00"
     },
-    features: ["Piel 100% vacuna", "2 Straps incluidos", "Bordada a máquina"]
-  },
-
-  // COLECCIÓN INÉS - $3,800
-  {
-    id: 15,
-    name: "Inés",
-    collection: "Inés",
-    price: 3800,
-    image: "/images/ines.png",
-    color: "Negro",
-    design: "Elefante Frente",
-    desc: {
-      es: "Piel 100% vacuna, bordada a máquina (elefante frente)",
-      en: "100% cowhide leather, machine embroidered (front elephant)"
-    },
-    features: ["Piel 100% vacuna", "Bordada a máquina", "Diseño único"]
+    "features": [
+      "Piel 100% vacuna"
+    ]
   },
   {
-    id: 16,
-    name: "Inés",
-    collection: "Inés",
-    price: 3800,
-    image: "/images/ines.png",
-    color: "Negro",
-    design: "Alas",
-    desc: {
-      es: "Piel 100% vacuna, bordada a máquina (alas)",
-      en: "100% cowhide leather, machine embroidered (wings)"
+    "id": 13,
+    "name": "Love",
+    "collection": "Love",
+    "price": 4250,
+    "image": "/images/extracted/page_13_img_1.jpeg",
+    "color": "Cafe espresso",
+    "design": "Bicho cuernos",
+    "desc": {
+      "es": "Bolsa piel 100% vacuna Bordada a máquina (bicho cuernos) Olán corte láser  Strap Color Cafe espresso  $4,250.00",
+      "en": "Bolsa piel 100% vacuna Bordada a máquina (bicho cuernos) Olán corte láser  Strap Color Cafe espresso  $4,250.00"
     },
-    features: ["Piel 100% vacuna", "Bordada a máquina", "Diseño único"]
+    "features": [
+      "Piel 100% vacuna"
+    ]
   },
   {
-    id: 17,
-    name: "Inés",
-    collection: "Inés",
-    price: 3800,
-    image: "/images/ines.png",
-    color: "Antimonio",
-    design: "Mano de Fátima",
-    desc: {
-      es: "Piel 100% vacuna, bordada a máquina (mano de Fátima)",
-      en: "100% cowhide leather, machine embroidered (Fatima's hand)"
+    "id": 14,
+    "name": "Love",
+    "collection": "Love",
+    "price": 4250,
+    "image": "/images/extracted/page_14_img_1.jpeg",
+    "color": "Snake print camel ahumado",
+    "design": "Alas",
+    "desc": {
+      "es": "Bolsa piel 100% vacuna Bordada a máquina (alas) Olán corte láser  Strap Color Snake print camel ahumado $4,250.00",
+      "en": "Bolsa piel 100% vacuna Bordada a máquina (alas) Olán corte láser  Strap Color Snake print camel ahumado $4,250.00"
     },
-    features: ["Piel 100% vacuna", "Bordada a máquina", "Diseño único"]
-  },
-
-  // MONEDEROS OLAN - $750
-  {
-    id: 18,
-    name: "Monedero Olan",
-    collection: "Accesorios",
-    price: 750,
-    image: "/images/monedero.png",
-    color: "Negro",
-    design: "Corazón",
-    desc: {
-      es: "Monedero 100% piel vacuna, bordado a máquina (corazón)",
-      en: "100% cowhide leather coin purse, machine embroidered (heart)"
-    },
-    features: ["Piel 100% vacuna", "Compacto", "Bordado corazón"]
+    "features": [
+      "Piel 100% vacuna"
+    ]
   },
   {
-    id: 19,
-    name: "Monedero Olan",
-    collection: "Accesorios",
-    price: 750,
-    image: "/images/monedero.png",
-    color: "Vino",
-    design: "Corazón",
-    desc: {
-      es: "Monedero 100% piel vacuna, bordado a máquina (corazón)",
-      en: "100% cowhide leather coin purse, machine embroidered (heart)"
+    "id": 15,
+    "name": "Love",
+    "collection": "Love",
+    "price": 4250,
+    "image": "/images/extracted/page_15_img_1.jpeg",
+    "color": "Cafe",
+    "design": "Bicho",
+    "desc": {
+      "es": "Bolsa piel 100% vacuna Bordada a máquina (bicho) Olán corte láser  Strap Color Cafe   $4,250.00",
+      "en": "Bolsa piel 100% vacuna Bordada a máquina (bicho) Olán corte láser  Strap Color Cafe   $4,250.00"
     },
-    features: ["Piel 100% vacuna", "Compacto", "Bordado corazón"]
+    "features": [
+      "Piel 100% vacuna"
+    ]
   },
   {
-    id: 20,
-    name: "Monedero Olan",
-    collection: "Accesorios",
-    price: 750,
-    image: "/images/monedero.png",
-    color: "Esmeralda",
-    design: "Corazón",
-    desc: {
-      es: "Monedero 100% piel vacuna, bordado a máquina (corazón)",
-      en: "100% cowhide leather coin purse, machine embroidered (heart)"
+    "id": 16,
+    "name": "Love",
+    "collection": "Love",
+    "price": 4250,
+    "image": "/images/extracted/page_16_img_1.jpeg",
+    "color": "Negro",
+    "design": "Bicho alas",
+    "desc": {
+      "es": "Bolsa piel 100% vacuna Bordada a máquina (bicho alas) Olán corte láser  Strap Color Negro  $4,250.00",
+      "en": "Bolsa piel 100% vacuna Bordada a máquina (bicho alas) Olán corte láser  Strap Color Negro  $4,250.00"
     },
-    features: ["Piel 100% vacuna", "Compacto", "Bordado corazón"]
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 17,
+    "name": "Love",
+    "collection": "Love",
+    "price": 4250,
+    "image": "/images/extracted/page_17_img_1.jpeg",
+    "color": "Cafe",
+    "design": "Alas",
+    "desc": {
+      "es": "Bolsa piel 100% vacuna Bordada a máquina (alas) Olán corte láser  Strap Color Cafe   $4,250.00",
+      "en": "Bolsa piel 100% vacuna Bordada a máquina (alas) Olán corte láser  Strap Color Cafe   $4,250.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 18,
+    "name": "Love",
+    "collection": "Love",
+    "price": 4250,
+    "image": "/images/extracted/page_18_img_1.jpeg",
+    "color": "Vainilla",
+    "design": "Alas",
+    "desc": {
+      "es": "Bolsa piel 100% vacuna Bordada a máquina (alas) Olán corte láser  Strap Color Vainilla  $4,250.00",
+      "en": "Bolsa piel 100% vacuna Bordada a máquina (alas) Olán corte láser  Strap Color Vainilla  $4,250.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 19,
+    "name": "Love",
+    "collection": "Love",
+    "price": 4250,
+    "image": "/images/extracted/page_19_img_1.jpeg",
+    "color": "Cafe",
+    "design": "Alas",
+    "desc": {
+      "es": "Bolsa piel 100% vacuna Bordada a máquina (alas) Olán corte láser  Strap Color Cafe   $4,250.00",
+      "en": "Bolsa piel 100% vacuna Bordada a máquina (alas) Olán corte láser  Strap Color Cafe   $4,250.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 20,
+    "name": "Love",
+    "collection": "Love",
+    "price": 4250,
+    "image": "/images/extracted/page_20_img_1.jpeg",
+    "color": "Gris",
+    "design": "Bicho alas",
+    "desc": {
+      "es": "Bolsa piel 100% vacuna Bordada a máquina (bicho alas) Olán corte láser  Strap Color Gris  $4,250.00",
+      "en": "Bolsa piel 100% vacuna Bordada a máquina (bicho alas) Olán corte láser  Strap Color Gris  $4,250.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 21,
+    "name": "Amelia",
+    "collection": "Amelia",
+    "price": 3900,
+    "image": "/images/extracted/page_21_img_1.png",
+    "color": "Color",
+    "design": "Diseño",
+    "desc": {
+      "es": "Amelia Bolsa piel 100% vacuna Bordada a máquina Strap liso Strap tréboles $3,900.00",
+      "en": "Amelia Bolsa piel 100% vacuna Bordada a máquina Strap liso Strap tréboles $3,900.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 22,
+    "name": "Amelia",
+    "collection": "Amelia",
+    "price": 3900,
+    "image": "/images/extracted/page_22_img_1.jpeg",
+    "color": "Negro",
+    "design": "Mano de fátima",
+    "desc": {
+      "es": "Bolsa piel 100% vacuna Bordada a máquina (mano de Fátima)  Strap liso Strap tréboles Color negro  $3,900.00",
+      "en": "Bolsa piel 100% vacuna Bordada a máquina (mano de Fátima)  Strap liso Strap tréboles Color negro  $3,900.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 23,
+    "name": "Amelia",
+    "collection": "Amelia",
+    "price": 3900,
+    "image": "/images/extracted/page_23_img_1.jpeg",
+    "color": "Antimonio",
+    "design": "Alas",
+    "desc": {
+      "es": "Bolsa piel 100% vacuna Bordada a máquina (alas)  Strap liso Strap tréboles Color Antimonio  $3,900.00",
+      "en": "Bolsa piel 100% vacuna Bordada a máquina (alas)  Strap liso Strap tréboles Color Antimonio  $3,900.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 24,
+    "name": "Amelia",
+    "collection": "Amelia",
+    "price": 3900,
+    "image": "/images/extracted/page_24_img_1.jpeg",
+    "color": "Negro",
+    "design": "Alas",
+    "desc": {
+      "es": "Bolsa piel 100% vacuna Bordada a máquina (alas)  Strap liso Strap tréboles Color negro  $3,900.00",
+      "en": "Bolsa piel 100% vacuna Bordada a máquina (alas)  Strap liso Strap tréboles Color negro  $3,900.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 25,
+    "name": "Amelia",
+    "collection": "Amelia",
+    "price": 3900,
+    "image": "/images/extracted/page_25_img_1.jpeg",
+    "color": "Negro",
+    "design": "Alas grises",
+    "desc": {
+      "es": "Bolsa piel 100% vacuna Bordadaa máquina (alas grises)  Strap liso Strap tréboles Color negro  $3,900.00",
+      "en": "Bolsa piel 100% vacuna Bordadaa máquina (alas grises)  Strap liso Strap tréboles Color negro  $3,900.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 26,
+    "name": "Amelia",
+    "collection": "Amelia",
+    "price": 3900,
+    "image": "/images/extracted/page_26_img_1.jpeg",
+    "color": "Blanco/negro",
+    "design": "Ojo pestañas",
+    "desc": {
+      "es": "Bolsa piel 100% vacuna Bordada a máquina (ojo pestañas)  Strap liso Strap tréboles Color Blanco/Negro  $3,900.00",
+      "en": "Bolsa piel 100% vacuna Bordada a máquina (ojo pestañas)  Strap liso Strap tréboles Color Blanco/Negro  $3,900.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 27,
+    "name": "Inés",
+    "collection": "Inés",
+    "price": 3800,
+    "image": "/images/extracted/page_27_img_1.png",
+    "color": "Negro",
+    "design": "Elefante frente",
+    "desc": {
+      "es": "Inés Bolsa 100% piel vacuna Bordada a máquina (Elefante Frente) Color Negro $3,800.00",
+      "en": "Inés Bolsa 100% piel vacuna Bordada a máquina (Elefante Frente) Color Negro $3,800.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 28,
+    "name": "Inés",
+    "collection": "Inés",
+    "price": 3800,
+    "image": "/images/extracted/page_28_img_1.jpeg",
+    "color": "Negro",
+    "design": "Alas",
+    "desc": {
+      "es": "Bolsa 100% piel vacuna Bordada a máquina (Alas) Color Negro $3,800.00",
+      "en": "Bolsa 100% piel vacuna Bordada a máquina (Alas) Color Negro $3,800.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 29,
+    "name": "Inés",
+    "collection": "Inés",
+    "price": 3800,
+    "image": "/images/extracted/page_29_img_1.jpeg",
+    "color": "Negro",
+    "design": "Bicho cuernos",
+    "desc": {
+      "es": "Bolsa 100% piel vacuna Bordada a máquina (Bicho Cuernos) Color Negro $3,800.00",
+      "en": "Bolsa 100% piel vacuna Bordada a máquina (Bicho Cuernos) Color Negro $3,800.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 30,
+    "name": "Inés",
+    "collection": "Inés",
+    "price": 3800,
+    "image": "/images/extracted/page_30_img_1.jpeg",
+    "color": "Antimonio",
+    "design": "Alas",
+    "desc": {
+      "es": "Bolsa 100% piel vacuna Bordada a máquina (Alas) Color Antimonio $3,800.00",
+      "en": "Bolsa 100% piel vacuna Bordada a máquina (Alas) Color Antimonio $3,800.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 31,
+    "name": "Inés",
+    "collection": "Inés",
+    "price": 3800,
+    "image": "/images/extracted/page_31_img_1.jpeg",
+    "color": "Antimonio",
+    "design": "Mano de fátima",
+    "desc": {
+      "es": "Bolsa 100% piel vacuna Bordada a máquina (Mano de Fátima) Color Antimonio $3,800.00",
+      "en": "Bolsa 100% piel vacuna Bordada a máquina (Mano de Fátima) Color Antimonio $3,800.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 32,
+    "name": "Inés",
+    "collection": "Inés",
+    "price": 3800,
+    "image": "/images/extracted/page_32_img_1.jpeg",
+    "color": "Antimonio",
+    "design": "Bicho cuernos",
+    "desc": {
+      "es": "Bolsa 100% piel vacuna Bordada a máquina (Bicho Cuernos) Color Antimonio $3,800.00",
+      "en": "Bolsa 100% piel vacuna Bordada a máquina (Bicho Cuernos) Color Antimonio $3,800.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 33,
+    "name": "Monedero Olan",
+    "collection": "Accesorios",
+    "price": 750,
+    "image": "/images/extracted/page_33_img_1.png",
+    "color": "Print serpiente",
+    "design": "Corazón",
+    "desc": {
+      "es": "Olan Monedero Monedero 100% piel vacuna Bordada a máquina (Corazón ) Print Serpiente $750.00",
+      "en": "Olan Monedero Monedero 100% piel vacuna Bordada a máquina (Corazón ) Print Serpiente $750.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 34,
+    "name": "Monedero Olan",
+    "collection": "Accesorios",
+    "price": 750,
+    "image": "/images/extracted/page_34_img_1.jpeg",
+    "color": "Hueso",
+    "design": "Corazón",
+    "desc": {
+      "es": "Monedero 100% piel vacuna Bordada a máquina (Corazón ) Color Hueso $750.00",
+      "en": "Monedero 100% piel vacuna Bordada a máquina (Corazón ) Color Hueso $750.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 35,
+    "name": "Monedero Olan",
+    "collection": "Accesorios",
+    "price": 750,
+    "image": "/images/extracted/page_35_img_1.jpeg",
+    "color": "Beige",
+    "design": "Corazón",
+    "desc": {
+      "es": "Monedero 100% piel vacuna Bordada a máquina (Corazón ) Color Beige $750.00",
+      "en": "Monedero 100% piel vacuna Bordada a máquina (Corazón ) Color Beige $750.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 36,
+    "name": "Monedero Olan",
+    "collection": "Accesorios",
+    "price": 750,
+    "image": "/images/extracted/page_36_img_1.jpeg",
+    "color": "Negro",
+    "design": "Corazón",
+    "desc": {
+      "es": "Monedero 100% piel vacuna Bordada a máquina (Corazón ) Color Negro $750.00",
+      "en": "Monedero 100% piel vacuna Bordada a máquina (Corazón ) Color Negro $750.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 37,
+    "name": "Monedero Olan",
+    "collection": "Accesorios",
+    "price": 750,
+    "image": "/images/extracted/page_37_img_1.jpeg",
+    "color": "Vino",
+    "design": "Corazón",
+    "desc": {
+      "es": "Monedero 100% piel vacuna Bordada a máquina (Corazón ) Color Vino $750.00",
+      "en": "Monedero 100% piel vacuna Bordada a máquina (Corazón ) Color Vino $750.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 38,
+    "name": "Monedero Olan",
+    "collection": "Accesorios",
+    "price": 750,
+    "image": "/images/extracted/page_38_img_1.jpeg",
+    "color": "Borgoña",
+    "design": "Corazón",
+    "desc": {
+      "es": "Monedero 100% piel vacuna Bordada a máquina (Corazón ) Color Borgoña  $750.00",
+      "en": "Monedero 100% piel vacuna Bordada a máquina (Corazón ) Color Borgoña  $750.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 39,
+    "name": "Monedero Olan",
+    "collection": "Accesorios",
+    "price": 750,
+    "image": "/images/extracted/page_39_img_1.jpeg",
+    "color": "Bronce",
+    "design": "Corazón",
+    "desc": {
+      "es": "Monedero 100% piel vacuna Bordada a máquina (Corazón ) Color Bronce $750.00",
+      "en": "Monedero 100% piel vacuna Bordada a máquina (Corazón ) Color Bronce $750.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 40,
+    "name": "Monedero Olan",
+    "collection": "Accesorios",
+    "price": 750,
+    "image": "/images/extracted/page_40_img_1.jpeg",
+    "color": "Print reptil",
+    "design": "Corazón",
+    "desc": {
+      "es": "Monedero 100% piel vacuna Bordada a máquina (Corazón ) Print Reptil  $750.00",
+      "en": "Monedero 100% piel vacuna Bordada a máquina (Corazón ) Print Reptil  $750.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 41,
+    "name": "Monedero Olan",
+    "collection": "Accesorios",
+    "price": 750,
+    "image": "/images/extracted/page_41_img_1.jpeg",
+    "color": "Dorado",
+    "design": "Corazón",
+    "desc": {
+      "es": "Monedero 100% piel vacuna Bordada a máquina (Corazón ) Color Dorado $750.00",
+      "en": "Monedero 100% piel vacuna Bordada a máquina (Corazón ) Color Dorado $750.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 42,
+    "name": "Monedero Olan",
+    "collection": "Accesorios",
+    "price": 750,
+    "image": "/images/extracted/page_42_img_1.jpeg",
+    "color": "Café",
+    "design": "Corazón",
+    "desc": {
+      "es": "Monedero 100% piel vacuna Bordada a máquina (Corazón ) Color Café  $750.00",
+      "en": "Monedero 100% piel vacuna Bordada a máquina (Corazón ) Color Café  $750.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 43,
+    "name": "Monedero Olan",
+    "collection": "Accesorios",
+    "price": 750,
+    "image": "/images/extracted/page_43_img_1.jpeg",
+    "color": "Negro",
+    "design": "Corazón",
+    "desc": {
+      "es": "Monedero 100% piel vacuna Bordada a máquina (Corazón ) Color Negro $750.00",
+      "en": "Monedero 100% piel vacuna Bordada a máquina (Corazón ) Color Negro $750.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
+  },
+  {
+    "id": 44,
+    "name": "Monedero Olan",
+    "collection": "Accesorios",
+    "price": 750,
+    "image": "/images/extracted/page_44_img_1.jpeg",
+    "color": "Esmeralda",
+    "design": "Corazón",
+    "desc": {
+      "es": "Monedero 100% piel vacuna Bordada a máquina (Corazón ) Color Esmeralda  $750.00",
+      "en": "Monedero 100% piel vacuna Bordada a máquina (Corazón ) Color Esmeralda  $750.00"
+    },
+    "features": [
+      "Piel 100% vacuna"
+    ]
   }
 ];
 

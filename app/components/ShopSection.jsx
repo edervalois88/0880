@@ -1,13 +1,26 @@
 'use client'
 
-import React, { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useMemo, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
 import ProductCard from './ProductCard';
 
 const ShopSection = ({ products, translations, language, whatsappNumber }) => {
   const [selectedCollection, setSelectedCollection] = useState('all');
+  const [quickViewProduct, setQuickViewProduct] = useState(null);
+  const [modalImageLoaded, setModalImageLoaded] = useState(false);
   
   const t = translations[language];
+
+  // Disable scroll when modal is open
+  useEffect(() => {
+    if (quickViewProduct) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      setModalImageLoaded(false);
+    }
+  }, [quickViewProduct]);
 
   // Obtener colecciones únicas
   const collections = useMemo(() => {
@@ -21,133 +34,187 @@ const ShopSection = ({ products, translations, language, whatsappNumber }) => {
     return products.filter(p => p.collection === selectedCollection);
   }, [products, selectedCollection]);
 
-  // Obtener precio por colección
-  const getCollectionPrice = (collection) => {
-    const product = products.find(p => p.collection === collection);
-    return product ? `$${product.price.toLocaleString('es-MX')}` : '';
+  // Manejar compra
+  const handlePurchase = (product) => {
+    const whatsappMessage = language === 'es' 
+      ? `Hola 0880, me interesa el modelo ${product.name} en color ${product.color} con diseño ${product.design} de la colección ${product.collection}.`
+      : `Hello 0880, I'm interested in the ${product.name} model, ${product.color} color with ${product.design} design from the ${product.collection} collection.`;
+    
+    window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`, '_blank');
   };
 
   return (
-    <section id="catalog" className="py-24 px-4 md:px-8 max-w-[1800px] mx-auto bg-gradient-to-b from-white via-amber-50/20 to-white">
-      {/* Header con identidad mexicana */}
-      <motion.div 
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        className="text-center mb-16 relative"
-      >
-        {/* Decoración superior */}
-        <div className="flex items-center justify-center gap-6 mb-8">
-          <div className="h-px w-16 bg-gradient-to-r from-transparent to-amber-600/50"></div>
-          <svg className="w-6 h-6 text-amber-700/40" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2L15.5 8.5L22 9.5L17 14.5L18 21L12 17.5L6 21L7 14.5L2 9.5L8.5 8.5L12 2Z"/>
-          </svg>
-          <div className="h-px w-16 bg-gradient-to-l from-transparent to-amber-600/50"></div>
-        </div>
-
-        <h2 className="text-xs font-bold tracking-[0.4em] uppercase text-brand-black mb-3">
-          {t.catalog.label}
-        </h2>
-        <p className="text-[10px] uppercase tracking-[0.3em] text-brand-black/40 font-light">
-          León, Guanajuato · México
-        </p>
-      </motion.div>
-
-      {/* Filtros de colección */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        className="mb-12 max-w-5xl mx-auto"
-      >
-        <p className="text-center text-[10px] uppercase tracking-[0.25em] text-brand-black/60 mb-6">
-          {t.catalog.filter}
-        </p>
-        
-        <div className="flex flex-wrap justify-center gap-3">
-          {collections.map((collection) => {
-            const isActive = selectedCollection === collection;
-            const displayName = collection === 'all' ? t.catalog.all : collection;
-            const price = collection !== 'all' ? getCollectionPrice(collection) : '';
-            
-            return (
-              <motion.button
-                key={collection}
-                onClick={() => setSelectedCollection(collection)}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className={`
-                  px-6 py-3 text-[10px] font-bold uppercase tracking-[0.25em] 
-                  transition-all duration-300 border-2
-                  ${isActive 
-                    ? 'bg-amber-700 text-white border-amber-700 shadow-lg shadow-amber-700/30' 
-                    : 'bg-white text-brand-black border-stone-200 hover:border-amber-600 hover:text-amber-700'
-                  }
-                `}
-              >
-                <div className="flex flex-col items-center gap-1">
-                  <span>{displayName}</span>
-                  {price && (
-                    <span className={`text-[8px] font-normal tracking-wider ${isActive ? 'opacity-80' : 'opacity-50'}`}>
-                      {price} MXN
-                    </span>
-                  )}
-                </div>
-              </motion.button>
-            );
-          })}
-        </div>
-
-        {/* Contador de productos */}
-        <div className="text-center mt-8">
-          <p className="text-[9px] uppercase tracking-[0.2em] text-brand-black/40">
-            {t.catalog.showing} <strong className="text-amber-700 font-bold">{filteredProducts.length}</strong> {t.catalog.products}
-          </p>
-        </div>
-      </motion.div>
-
-      {/* Grid de productos */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 md:gap-10">
-        {filteredProducts.map((product, i) => (
-          <ProductCard 
-            key={product.id}
-            product={product}
-            index={i}
-            whatsappNumber={whatsappNumber}
-            btnText={t.catalog.btn}
-            language={language}
-          />
-        ))}
-      </div>
-
-      {/* Mensaje de identidad mexicana */}
+    <section id="catalog" className="py-32 px-6 md:px-12 max-w-[2000px] mx-auto bg-[#fafafa]">
+      
+      {/* Header Minimalista */}
       <motion.div 
         initial={{ opacity: 0, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        className="mt-24 text-center max-w-2xl mx-auto"
+        transition={{ duration: 0.8 }}
+        className="text-center mb-24 relative"
       >
-        <div className="border-t border-b border-amber-600/20 py-8 px-6">
-          <p className="text-sm font-serif italic text-brand-black/70 leading-relaxed mb-4">
-            &ldquo;Cada bolsa es hecha con mucho corazón por artesanos y peleteros en León, Guanajuato&rdquo;
-          </p>
-          <div className="flex items-center justify-center gap-4 text-[9px] uppercase tracking-[0.25em] text-brand-black/50">
-            <span className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-green-700" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-              </svg>
-              100% Piel Mexicana
-            </span>
-            <span>•</span>
-            <span className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-amber-700" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M9 11.75c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25-.56-1.25-1.25-1.25zm6 0c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25-.56-1.25-1.25-1.25zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8 0-.29.02-.58.05-.86 2.36-1.05 4.23-2.98 5.21-5.37C11.07 8.33 14.05 10 17.42 10c.78 0 1.53-.09 2.25-.26.21.71.33 1.47.33 2.26 0 4.41-3.59 8-8 8z"/>
-              </svg>
-              Hecho a Mano
-            </span>
-          </div>
+        <span className="text-[10px] uppercase tracking-[0.4em] text-brand-black/40 font-bold block mb-4">
+          0880 Collection
+        </span>
+        <h2 className="text-4xl md:text-6xl font-serif text-brand-black tracking-tight mb-6">
+          {t.catalog.label.split('·')[0]}
+        </h2>
+        <div className="h-px w-24 bg-brand-black/20 mx-auto"></div>
+      </motion.div>
+
+      {/* Filtros elegantes y dinámicos */}
+      <motion.div 
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        className="mb-20"
+      >
+        <div className="flex flex-wrap justify-center gap-2 md:gap-4 max-w-4xl mx-auto">
+          {collections.map((collection) => {
+            const isActive = selectedCollection === collection;
+            const displayName = collection === 'all' ? t.catalog.all : collection;
+            
+            return (
+              <button
+                key={collection}
+                onClick={() => setSelectedCollection(collection)}
+                className={`
+                  relative px-6 py-4 text-[11px] font-medium uppercase tracking-[0.2em] transition-all duration-500 overflow-hidden
+                  ${isActive ? 'text-brand-black' : 'text-brand-black/40 hover:text-brand-black'}
+                `}
+              >
+                <span className="relative z-10">{displayName}</span>
+                {isActive && (
+                  <motion.div
+                    layoutId="filterIndicator"
+                    className="absolute inset-0 bg-white border border-brand-black/10 rounded-none -z-0"
+                    initial={false}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  />
+                )}
+              </button>
+            );
+          })}
         </div>
       </motion.div>
+
+      {/* Grid Iterativo y Limpio */}
+      <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-20">
+        <AnimatePresence>
+          {filteredProducts.map((product, i) => (
+            <motion.div
+              layout
+              key={product.id}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.5, ease: "easeInOut" }}
+            >
+              <ProductCard 
+                product={product}
+                index={i}
+                language={language}
+                onQuickView={setQuickViewProduct}
+              />
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </motion.div>
+
+      {/* Quick View Modal (Interactivo) */}
+      <AnimatePresence>
+        {quickViewProduct && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 md:p-12">
+            {/* Overlay */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setQuickViewProduct(null)}
+              className="absolute inset-0 bg-brand-black/60 backdrop-blur-md cursor-pointer"
+            />
+            
+            {/* Modal Content */}
+            <motion.div 
+              initial={{ opacity: 0, y: 100, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 50, scale: 0.95 }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="relative w-full max-w-5xl bg-white shadow-2xl overflow-hidden flex flex-col md:flex-row h-[80vh] md:h-[70vh]"
+            >
+              {/* Close Button */}
+              <button 
+                onClick={() => setQuickViewProduct(null)}
+                className="absolute top-6 right-6 z-10 w-10 h-10 bg-white/50 backdrop-blur-md flex items-center justify-center text-brand-black hover:bg-black hover:text-white transition-colors rounded-full"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </button>
+
+              {/* Image Side */}
+              <div className="w-full md:w-1/2 relative bg-[#f0f0f0] h-1/2 md:h-full overflow-hidden group">
+                {!modalImageLoaded && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-8 h-8 border-2 border-brand-black/20 border-t-brand-black animate-spin rounded-full"></div>
+                  </div>
+                )}
+                <Image 
+                  src={quickViewProduct.image}
+                  alt={quickViewProduct.name}
+                  fill
+                  onLoadingComplete={() => setModalImageLoaded(true)}
+                  className={`object-cover object-center transition-opacity duration-700 ${modalImageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                />
+              </div>
+
+              {/* Detail Side */}
+              <div className="w-full md:w-1/2 p-8 md:p-16 flex flex-col h-1/2 md:h-full overflow-y-auto">
+                <span className="text-[10px] uppercase tracking-[0.3em] text-brand-black/50 font-bold mb-4 block">
+                  {quickViewProduct.collection} Collection
+                </span>
+                
+                <h3 className="font-serif text-4xl md:text-5xl text-brand-black mb-6 leading-tight">
+                  {quickViewProduct.name}
+                </h3>
+                
+                <div className="text-2xl font-light text-brand-black tracking-widest mb-10 pb-10 border-b border-brand-black/10">
+                  ${quickViewProduct.price.toLocaleString('es-MX')} <span className="text-xs">MXN</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-8 mb-12">
+                  <div>
+                    <span className="text-[9px] uppercase tracking-[0.2em] text-brand-black/40 block mb-2">Color</span>
+                    <span className="font-medium text-sm tracking-widest uppercase">{quickViewProduct.color}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] uppercase tracking-[0.2em] text-brand-black/40 block mb-2">{language === 'es' ? 'Diseño' : 'Design'}</span>
+                    <span className="font-medium text-sm tracking-widest uppercase">{quickViewProduct.design}</span>
+                  </div>
+                </div>
+
+                <div className="mb-12">
+                   <p className="text-xs leading-loose text-brand-black/60 tracking-wider font-light">
+                     {quickViewProduct.desc[language]}
+                   </p>
+                </div>
+
+                <div className="mt-auto pt-8">
+                  <button 
+                    onClick={() => handlePurchase(quickViewProduct)}
+                    className="w-full bg-brand-black text-white px-8 py-5 text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-amber-700 transition-colors duration-300 flex items-center justify-center gap-4 group"
+                  >
+                    {language === 'es' ? 'Solicitar Asesoría' : 'Request Info'}
+                    <svg className="w-4 h-4 transform group-hover:translate-x-2 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                  </button>
+                  <p className="text-center text-[9px] text-brand-black/40 uppercase tracking-widest mt-4">
+                    {language === 'es' ? 'Atención personalizada vía WhatsApp' : 'Personalized support via WhatsApp'}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </section>
   );
 };

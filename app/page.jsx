@@ -209,47 +209,97 @@ export default function Home() {
           </div>
 
           {/* Origin Section */}
-          <section id="origin" className="py-32 px-6 md:px-12 bg-white relative overflow-hidden">
+          <section id="origin" className="py-32 px-6 md:px-12 bg-[#fafafa] relative overflow-hidden">
+            {/* Large Watermark Typography */}
+            <motion.div 
+               initial={{ opacity: 0, x: -100 }}
+               whileInView={{ opacity: 1, x: 0 }}
+               viewport={{ once: true }}
+               transition={{ duration: 1.5, ease: "easeOut" }}
+               className="absolute top-10 left-[-5%] text-[15rem] md:text-[25rem] font-serif font-bold text-brand-black/[0.02] select-none pointer-events-none z-0 whitespace-nowrap"
+            >
+              0880
+            </motion.div>
+
             <motion.div 
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true, margin: "-100px" }}
               variants={staggerChildren}
-              className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-20 items-center"
+              className="max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-12 gap-12 lg:gap-20 items-center relative z-10"
             >
-              <div className="order-2 md:order-1 space-y-10">
-                 <motion.span variants={fadeUp} className="text-xs font-bold tracking-[0.3em] uppercase text-brand-grey block">{t.origin.label}</motion.span>
-                 <motion.h2 variants={fadeUp} className="text-4xl md:text-6xl font-serif text-brand-black leading-tight">
-                   &ldquo;{t.origin.title1} <br/> <span className="italic text-brand-grey font-light">{t.origin.title2}&rdquo;</span>
+              <div className="order-2 md:order-1 md:col-span-5 lg:col-span-6 space-y-12 relative">
+                 <motion.div variants={fadeUp} className="flex items-center gap-4">
+                   <div className="h-px w-12 bg-amber-700/50"></div>
+                   <span className="text-[10px] font-bold tracking-[0.4em] uppercase text-brand-black/60">{t.origin.label}</span>
+                 </motion.div>
+                 
+                 <motion.h2 variants={fadeUp} className="text-5xl md:text-7xl lg:text-8xl font-serif text-brand-black leading-[1.1] tracking-tight">
+                   &ldquo;{t.origin.title1} <br/> 
+                   <span className="italic text-brand-black/40 font-light block mt-4">{t.origin.title2}&rdquo;</span>
                  </motion.h2>
-                 <motion.div variants={fadeUp} className="w-24 h-px bg-brand-black/20"></motion.div>
-                 <motion.p variants={fadeUp} className="text-lg font-light leading-loose text-brand-black/70 tracking-wide text-justify">
-                   {t.origin.desc}
-                 </motion.p>
+                 
+                 <motion.div variants={fadeUp} className="relative">
+                   <p className="text-sm md:text-base font-light leading-[2.5] text-brand-black/70 tracking-wide text-left max-w-xl">
+                     <span className="float-left text-6xl font-serif leading-none pr-3 pt-2 text-brand-black/30">0</span>
+                     {t.origin.desc}
+                   </p>
+                 </motion.div>
+
+                 <motion.div variants={fadeUp} className="pt-8 border-t border-brand-black/10 max-w-md">
+                    <p className="font-serif italic text-xl text-brand-black/80">
+                      "Creando identidad, puntada a puntada."
+                    </p>
+                    <p className="text-[9px] uppercase tracking-[0.3em] font-medium text-brand-black/40 mt-3">
+                      — Familia 0880mx
+                    </p>
+                 </motion.div>
               </div>
               
-              <motion.div variants={fadeUp} className="order-1 md:order-2 flex justify-center relative items-center">
-                 <motion.div 
-                    whileHover={{ scale: 0.98 }}
-                    transition={{ duration: 0.5 }}
-                    className="relative w-full max-w-sm aspect-[3/4]"
-                 >
-                    <Image 
-                      src="/images/Gemini_Generated_Image_de5chode5chode5c.png" 
-                      alt="Craftsmanship" 
-                      fill
-                      className="object-cover shadow-2xl grayscale brightness-110 contrast-100" 
-                    />
+              <div className="order-1 md:order-2 md:col-span-7 lg:col-span-6 relative">
+                 <motion.div variants={fadeUp} className="flex justify-end relative items-center w-full">
+                    {/* Main Image */}
                     <motion.div 
-                      animate={{ y: [0, -10, 0] }}
-                      transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                      className="absolute -bottom-6 -left-6 bg-brand-black p-4 w-32 shadow-xl text-white z-10"
+                       whileHover={{ scale: 0.98 }}
+                       transition={{ duration: 0.8, ease: "easeOut" }}
+                       className="relative w-[90%] md:w-[85%] aspect-[3/4] z-10"
                     >
-                      <p className="font-serif italic text-lg text-center">100%</p>
-                      <p className="text-[8px] uppercase tracking-widest opacity-70 text-center">{t.origin.badge}</p>
+                       <Image 
+                         src="/images/Gemini_Generated_Image_de5chode5chode5c.png" 
+                         alt="Craftsmanship" 
+                         fill
+                         className="object-cover shadow-2xl grayscale brightness-110 contrast-100" 
+                       />
+                       
+                       {/* Floating Badge */}
+                       <motion.div 
+                         animate={{ y: [0, -10, 0] }}
+                         transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                         className="absolute -bottom-8 -left-8 md:-left-16 bg-brand-black p-6 w-40 shadow-2xl text-white z-20 backdrop-blur-md bg-black/90"
+                       >
+                         <p className="font-serif italic text-3xl text-center mb-1">100%</p>
+                         <p className="text-[9px] uppercase tracking-[0.25em] opacity-70 text-center font-medium">{t.origin.badge}</p>
+                       </motion.div>
+                    </motion.div>
+
+                    {/* Secondary Overlapping Image (Decorative/Abstract) */}
+                    <motion.div 
+                       initial={{ opacity: 0, y: 50 }}
+                       whileInView={{ opacity: 1, y: 0 }}
+                       viewport={{ once: true }}
+                       transition={{ delay: 0.4, duration: 1 }}
+                       className="absolute -top-12 -left-4 md:-left-12 w-48 h-64 md:w-64 md:h-80 z-0 bg-stone-200 overflow-hidden shadow-xl"
+                    >
+                       <Image 
+                         src="/images/valentina.png" 
+                         alt="Texture detail" 
+                         fill
+                         className="object-cover scale-150 grayscale opacity-40 mix-blend-multiply" 
+                       />
+                       <div className="absolute inset-0 bg-gradient-to-tr from-amber-700/20 to-transparent mix-blend-overlay"></div>
                     </motion.div>
                  </motion.div>
-              </motion.div>
+              </div>
             </motion.div>
           </section>
 
