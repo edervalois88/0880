@@ -248,7 +248,7 @@ export default function Home() {
 
                  <motion.div variants={fadeUp} className="pt-8 border-t border-brand-black/10 max-w-md">
                     <p className="font-serif italic text-xl text-brand-black/80">
-                      "Creando identidad, puntada a puntada."
+                      &quot;Creando identidad, puntada a puntada.&quot;
                     </p>
                     <p className="text-[9px] uppercase tracking-[0.3em] font-medium text-brand-black/40 mt-3">
                       — Familia 0880mx
