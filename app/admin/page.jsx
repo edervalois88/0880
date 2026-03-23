@@ -1,61 +1,141 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, Image as ImageIcon, Layout, Type, Palette, Save, Eye, Plus, Trash2, Home, CheckCircle, Edit2, X, Search } from 'lucide-react';
+import { Settings, Image as ImageIcon, Layout, Type, Palette, Save, Eye, Plus, Trash2, Home, CheckCircle, Edit2, X, Search, LogOut } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
-import { productsData } from '../data/constants';
 import Image from 'next/image';
+import {
+  getProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  getConfig,
+  updateConfig,
+} from '@/lib/server-actions';
+
+const defaultConfig = {
+  id: 'singleton',
+  siteName: '0880 LUXURY COLLECTION',
+  whatsappNumber: '5215633551085',
+  currency: 'MXN',
+  heroTitle1: 'Arte en',
+  heroTitle2: 'cada puntada.',
+  heroSubtitle: 'Lujo Silencioso • Hecho a Mano • León, Gto.',
+  primaryColor: '#b45309',
+  backgroundColor: '#fafafa',
+  updatedBy: '',
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
 
 export default function AdminDashboard() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('catalog');
   const [isSaving, setIsSaving] = useState(false);
-  const [products, setProducts] = useState(productsData);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [products, setProducts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [editingProduct, setEditingProduct] = useState(null);
-  
-  // Simulated configuration state
-  const [config, setConfig] = useState({
-    siteName: '0880',
-    whatsappNumber: '5215633551085',
-    currency: 'MXN',
-    hero: {
-      title1: 'Arte en',
-      title2: 'cada puntada.',
-      subtitle: 'Lujo Silencioso • Hecho a Mano • León, Gto.',
-    },
-    theme: {
-      primaryColor: '#b45309', // amber-700
-      backgroundColor: '#fafafa',
-    }
-  });
+  const [config, setConfig] = useState(defaultConfig);
 
-  const handleSave = () => {
+  // Check authentication
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    }
+  }, [status, router]);
+
+  // Load initial data
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+
+    const loadAdminData = async () => {
+      try {
+        const [productsData, configData] = await Promise.all([
+          getProducts(),
+          getConfig(),
+        ]);
+
+        setProducts(productsData || []);
+        setConfig(configData || defaultConfig);
+      } catch (error) {
+        toast.error('No se pudo cargar la configuración.');
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+
+    loadAdminData();
+  }, [status]);
+
+  const handleSave = async () => {
+    if (!session?.user) return;
     setIsSaving(true);
-    // Simulate API call to save directly to a config file/db
-    setTimeout(() => {
+
+    try {
+      await updateConfig({
+        siteName: config.siteName,
+        whatsappNumber: config.whatsappNumber,
+        currency: config.currency,
+        heroTitle1: config.heroTitle1,
+        heroTitle2: config.heroTitle2,
+        heroSubtitle: config.heroSubtitle,
+        primaryColor: config.primaryColor,
+        backgroundColor: config.backgroundColor,
+      });
+
+      toast.success('Cambios guardados exitosamente.');
+    } catch (error) {
+      toast.error('No se pudieron guardar los cambios.');
+    } finally {
       setIsSaving(false);
-      toast.success('Cambios guardados exitosamente. Visita el sitio para ver los resultados.');
-    }, 1500);
-  };
-
-  const handleSaveProduct = (e) => {
-    e.preventDefault();
-    if (editingProduct.id === 'new') {
-      const newId = Math.max(...products.map(p => p.id)) + 1;
-      setProducts([{ ...editingProduct, id: newId }, ...products]);
-      toast.success('Producto agregado con éxito.');
-    } else {
-      setProducts(products.map(p => p.id === editingProduct.id ? editingProduct : p));
-      toast.success('Producto actualizado.');
     }
-    setEditingProduct(null);
   };
 
-  const handleDeleteProduct = (id) => {
-    if(confirm('¿Estás seguro de que deseas eliminar este producto?')) {
-      setProducts(products.filter(p => p.id !== id));
+  const handleSaveProduct = async (e) => {
+    e.preventDefault();
+    if (!session?.user) return;
+
+    const productData = {
+      name: editingProduct.name,
+      collection: editingProduct.collection,
+      price: editingProduct.price,
+      color: editingProduct.color,
+      design: editingProduct.design,
+      image: editingProduct.image,
+      descEs: editingProduct.descEs || '',
+      descEn: editingProduct.descEn || editingProduct.descEs || '',
+    };
+
+    try {
+      if (editingProduct.id === 'new') {
+        const newProduct = await createProduct(productData);
+        setProducts([newProduct, ...products]);
+        toast.success('Producto agregado con éxito.');
+      } else {
+        const updated = await updateProduct(editingProduct.id, productData);
+        setProducts(products.map((p) => (p.id === editingProduct.id ? updated : p)));
+        toast.success('Producto actualizado.');
+      }
+      setEditingProduct(null);
+    } catch (error) {
+      toast.error('Error al guardar el producto.');
+    }
+  };
+
+  const handleDeleteProduct = async (id) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar este producto?')) return;
+
+    try {
+      await deleteProduct(id);
+      setProducts(products.filter((p) => p.id !== id));
       toast.success('Producto eliminado.');
+    } catch (error) {
+      toast.error('Error al eliminar el producto.');
     }
   };
 
@@ -72,6 +152,22 @@ export default function AdminDashboard() {
     p.collection.toLowerCase().includes(searchQuery.toLowerCase()) || 
     p.color.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  if (status === 'loading' || isLoadingData) {
+    return (
+      <div className="min-h-screen bg-stone-100 flex items-center justify-center">
+        <Toaster position="top-right" />
+        <div className="text-center">
+          <div className="w-10 h-10 border-2 border-stone-300 border-t-black animate-spin rounded-full mx-auto mb-4"></div>
+          <p className="text-xs uppercase tracking-widest text-stone-500">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'unauthenticated') {
+    return null; // Will redirect in useEffect
+  }
 
   return (
     <div className="min-h-screen bg-stone-100 font-sans text-stone-800 flex flex-col md:flex-row">
@@ -201,8 +297,8 @@ export default function AdminDashboard() {
                         <label className="block text-xs font-semibold text-stone-500 mb-2 uppercase tracking-wide">Título Principal (Línea 1)</label>
                         <input 
                           type="text" 
-                          value={config.hero.title1}
-                          onChange={(e) => setConfig({...config, hero: {...config.hero, title1: e.target.value}})}
+                          value={config.heroTitle1}
+                          onChange={(e) => setConfig({...config, heroTitle1: e.target.value})}
                           className="w-full border border-stone-300 rounded px-4 py-2 font-serif text-lg focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
                         />
                       </div>
@@ -211,8 +307,8 @@ export default function AdminDashboard() {
                         <label className="block text-xs font-semibold text-stone-500 mb-2 uppercase tracking-wide">Título Principal (Línea 2 - Itálica)</label>
                         <input 
                           type="text" 
-                          value={config.hero.title2}
-                          onChange={(e) => setConfig({...config, hero: {...config.hero, title2: e.target.value}})}
+                          value={config.heroTitle2}
+                          onChange={(e) => setConfig({...config, heroTitle2: e.target.value})}
                           className="w-full border border-stone-300 rounded px-4 py-2 font-serif italic text-lg focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
                         />
                       </div>
@@ -221,8 +317,8 @@ export default function AdminDashboard() {
                         <label className="block text-xs font-semibold text-stone-500 mb-2 uppercase tracking-wide">Subtítulo (Microcopy)</label>
                         <input 
                           type="text" 
-                          value={config.hero.subtitle}
-                          onChange={(e) => setConfig({...config, hero: {...config.hero, subtitle: e.target.value}})}
+                          value={config.heroSubtitle}
+                          onChange={(e) => setConfig({...config, heroSubtitle: e.target.value})}
                           className="w-full border border-stone-300 rounded px-4 py-2 text-xs uppercase tracking-widest focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
                         />
                       </div>
@@ -246,7 +342,7 @@ export default function AdminDashboard() {
                       <p className="text-sm text-stone-500 mt-1">Gestiona tus colecciones, precios y detalles de {products.length} productos.</p>
                     </div>
                     <button 
-                      onClick={() => setEditingProduct({ id: 'new', name: '', collection: 'Valentina', price: 4200, color: '', design: '', image: '/images/valentina.png', desc: { es: '', en: '' } })}
+                      onClick={() => setEditingProduct({ id: 'new', name: '', collection: 'Valentina', price: 4200, color: '', design: '', image: '/images/extracted/page_1_img_1.png', descEs: '', descEn: '' })}
                       className="bg-amber-700 hover:bg-amber-800 text-white px-4 py-2 rounded text-xs uppercase tracking-widest font-bold transition-colors flex items-center gap-2 shrink-0"
                     >
                       <Plus size={16} />
@@ -347,14 +443,14 @@ export default function AdminDashboard() {
                         <div className="flex items-center gap-4">
                           <input 
                             type="color" 
-                            value={config.theme.primaryColor}
-                            onChange={(e) => setConfig({...config, theme: {...config.theme, primaryColor: e.target.value}})}
+                            value={config.primaryColor}
+                            onChange={(e) => setConfig({...config, primaryColor: e.target.value})}
                             className="w-12 h-12 rounded cursor-pointer border-0 p-0 shadow-sm"
                           />
                           <input 
                             type="text" 
-                            value={config.theme.primaryColor}
-                            onChange={(e) => setConfig({...config, theme: {...config.theme, primaryColor: e.target.value}})}
+                            value={config.primaryColor}
+                            onChange={(e) => setConfig({...config, primaryColor: e.target.value})}
                             className="border border-stone-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 font-mono text-stone-600"
                           />
                         </div>
@@ -367,8 +463,8 @@ export default function AdminDashboard() {
                            {['#fafafa', '#ffffff', '#f5f5f4', '#fdfbf7'].map(color => (
                              <button
                                key={color}
-                               onClick={() => setConfig({...config, theme: {...config.theme, backgroundColor: color}})}
-                               className={`w-12 h-12 rounded-full border-2 transition-all ${config.theme.backgroundColor === color ? 'border-amber-600 scale-110 shadow-md ring-2 ring-amber-600/20 ring-offset-2' : 'border-stone-200 hover:scale-105'}`}
+                               onClick={() => setConfig({...config, backgroundColor: color})}
+                               className={`w-12 h-12 rounded-full border-2 transition-all ${config.backgroundColor === color ? 'border-amber-600 scale-110 shadow-md ring-2 ring-amber-600/20 ring-offset-2' : 'border-stone-200 hover:scale-105'}`}
                                style={{ backgroundColor: color }}
                              />
                            ))}
@@ -406,9 +502,9 @@ export default function AdminDashboard() {
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                       {[
                         { id: 1, src: '/images/Gemini_Generated_Image_de5chode5chode5c.png', tag: 'Hero Cover' },
-                        { id: 2, src: '/images/valentina.png', tag: 'Textura' },
-                        { id: 3, src: '/images/extracted/page_2_img_0.jpeg', tag: 'Detalle Piel' },
-                        { id: 4, src: '/images/extracted/page_9_img_0.jpeg', tag: 'Banner Amor' },
+                        { id: 2, src: '/images/extracted/page_1_img_1.png', tag: 'Textura' },
+                        { id: 3, src: '/images/extracted/page_2_img_1.jpeg', tag: 'Detalle Piel' },
+                        { id: 4, src: '/images/extracted/page_9_img_1.jpeg', tag: 'Banner Amor' },
                       ].map(img => (
                         <div key={img.id} className="group relative aspect-square bg-stone-100 rounded-lg overflow-hidden border border-stone-200">
                           <Image src={img.src} alt={img.tag} fill className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
@@ -459,7 +555,7 @@ export default function AdminDashboard() {
                       <div className="w-1/3 space-y-2">
                         <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wide">Imagen</label>
                         <div className="aspect-[3/4] bg-stone-100 rounded-lg border border-stone-200 border-dashed flex items-center justify-center relative overflow-hidden group hover:bg-stone-50 transition-colors cursor-pointer">
-                          <Image src={editingProduct.image || '/images/valentina.png'} alt="Preview" fill className="object-cover" />
+                          <Image src={editingProduct.image || '/images/extracted/page_1_img_1.png'} alt="Preview" fill className="object-cover" />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
                             <ImageIcon size={24} />
                           </div>
@@ -527,10 +623,10 @@ export default function AdminDashboard() {
                         </div>
 
                         <div>
-                          <label className="block text-xs font-semibold text-stone-500 mb-1 uppercase tracking-wide">Descripción Detallada</label>
+                          <label className="block text-xs font-semibold text-stone-500 mb-1 uppercase tracking-wide">Descripción Detallada (Español)</label>
                           <textarea 
                             rows="3" required
-                            value={editingProduct.desc?.es || ''} onChange={(e) => setEditingProduct({...editingProduct, desc: { ...editingProduct.desc, es: e.target.value }})}
+                            value={editingProduct.descEs || ''} onChange={(e) => setEditingProduct({...editingProduct, descEs: e.target.value})}
                             className="w-full border border-stone-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500 outline-none resize-none"
                           />
                         </div>

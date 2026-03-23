@@ -719,11 +719,11 @@ export const translations = {
       label: "Nuestro Origen",
       title1: "Orgullosamente Mexicana",
       title2: "hecha con corazón.",
-      desc: "0880mx es una marca orgullosamente mexicana creada con la intención de ayudar a artesanos y peleteros en el estado de León, Guanajuato, lugar donde se hace con mucho corazón cada bolsa con la mejor calidad en piel 100% mexicana y siempre tratando de darle identidad de nuestro país a cada pieza.",
+      desc: "0880mx es una marca orgullosamente mexicana creada con la intención de ayudar a artesanos y peleteros en el estado de León, Guanajuato, lugar donde se hace con mucho corazón cada bolsa con la mejor calidad en piel genuina y siempre tratando de darle identidad de nuestro país a cada pieza.",
       badge: "Hecho a mano"
     },
     savoir: {
-      t1: "Piel Genuina", d1: "Piel 100% vacuna mexicana de la mejor calidad.",
+      t1: "Piel Genuina", d1: "Piel 100% vacuna de la mejor calidad.",
       t2: "Artesanía", d2: "Bordados a máquina hechos con dedicación en León, Gto.",
       t3: "Identidad", d3: "Diseños únicos que reflejan el orgullo mexicano."
     },

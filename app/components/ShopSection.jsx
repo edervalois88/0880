@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import ProductCard from './ProductCard';
 
-const ShopSection = ({ products, translations, language, whatsappNumber }) => {
+const ShopSection = ({ products, translations, language, whatsappNumber, searchQuery = '' }) => {
   const [selectedCollection, setSelectedCollection] = useState('all');
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [modalImageLoaded, setModalImageLoaded] = useState(false);
@@ -30,9 +30,29 @@ const ShopSection = ({ products, translations, language, whatsappNumber }) => {
 
   // Filtrar productos
   const filteredProducts = useMemo(() => {
-    if (selectedCollection === 'all') return products;
-    return products.filter(p => p.collection === selectedCollection);
-  }, [products, selectedCollection]);
+    const normalizedSearch = searchQuery.trim().toLowerCase();
+
+    return products.filter((product) => {
+      const inCollection = selectedCollection === 'all' || product.collection === selectedCollection;
+      if (!inCollection) return false;
+
+      if (!normalizedSearch) return true;
+
+      const haystack = [
+        product.name,
+        product.collection,
+        product.color,
+        product.design,
+        product.desc?.es,
+        product.desc?.en,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return haystack.includes(normalizedSearch);
+    });
+  }, [products, selectedCollection, searchQuery]);
 
   // Manejar compra
   const handlePurchase = (product) => {
@@ -121,6 +141,19 @@ const ShopSection = ({ products, translations, language, whatsappNumber }) => {
           ))}
         </AnimatePresence>
       </motion.div>
+
+      {filteredProducts.length === 0 && (
+        <div className="mt-16 text-center border border-brand-black/10 bg-white px-6 py-12 max-w-2xl mx-auto">
+          <p className="text-[11px] uppercase tracking-[0.25em] text-brand-black/50 mb-3">
+            {language === 'es' ? 'Sin resultados' : 'No results'}
+          </p>
+          <p className="text-sm text-brand-black/70">
+            {language === 'es'
+              ? `No encontramos productos para "${searchQuery}".`
+              : `We could not find products for "${searchQuery}".`}
+          </p>
+        </div>
+      )}
 
       {/* Quick View Modal (Interactivo) */}
       <AnimatePresence>

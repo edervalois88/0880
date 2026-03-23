@@ -1,0 +1,61 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  password  String     // bcrypt hashed
+  role      String     @default("editor") // admin, editor
+  active    Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  auditLogs AuditLog[]
+}
+
+model Product {
+  id            Int      @id @default(autoincrement())
+  name          String
+  collection    String
+  price         Int
+  image         String
+  color         String
+  design        String
+  descEs        String   @default("")
+  descEn        String   @default("")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Config {
+  id                String   @id @default("singleton")
+  siteName          String   @default("0880")
+  whatsappNumber    String   @default("5215633551085")
+  currency          String   @default("MXN")
+  heroTitle1        String   @default("Arte en")
+  heroTitle2        String   @default("cada puntada.")
+  heroSubtitle      String   @default("Lujo Silencioso • Hecho a Mano • León, Gto.")
+  primaryColor      String   @default("#b45309")
+  backgroundColor   String   @default("#fafafa")
+  updatedAt         DateTime @updatedAt
+  updatedBy         String?  // user email who last updated
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String   // CREATE, UPDATE, DELETE
+  resource  String   // Product, Config, User
+  resourceId String
+  changes   String   // JSON serialized
+  createdAt DateTime @default(now())
+}

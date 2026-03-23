@@ -1,0 +1,35 @@
+
+> 0880@0.1.0 build
+> next build
+
+ ÔÜá Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of C:\Users\EderV\package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * C:\Users\EderV\0880\package-lock.json
+
+   Ôû▓ Next.js 15.5.12
+   - Environments: .env.local, .env
+
+   Creating an optimized production build ...
+/*! ­ƒî╝ daisyUI 5.5.19 */
+ Ô£ô Compiled successfully in 4.5s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/8) ...
+   Generating static pages (2/8) 
+ Ô¿» useSearchParams() should be wrapped in a suspense boundary at page "/login". Read more: https://nextjs.org/docs/messages/missing-suspense-with-csr-bailout
+    at g (C:\Users\EderV\0880\.next\server\chunks\382.js:1:88724)
+    at m (C:\Users\EderV\0880\.next\server\chunks\382.js:9:14384)
+    at j (C:\Users\EderV\0880\.next\server\app\login\page.js:2:11622)
+    at n3 (C:\Users\EderV\0880\node_modules\next\dist\compiled\next-server\app-page.runtime.prod.js:2:82831)
+    at n6 (C:\Users\EderV\0880\node_modules\next\dist\compiled\next-server\app-page.runtime.prod.js:2:84601)
+    at n5 (C:\Users\EderV\0880\node_modules\next\dist\compiled\next-server\app-page.runtime.prod.js:2:104801)
+    at n7 (C:\Users\EderV\0880\node_modules\next\dist\compiled\next-server\app-page.runtime.prod.js:2:102219)
+    at n8 (C:\Users\EderV\0880\node_modules\next\dist\compiled\next-server\app-page.runtime.prod.js:2:83183)
+    at n6 (C:\Users\EderV\0880\node_modules\next\dist\compiled\next-server\app-page.runtime.prod.js:2:84647)
+    at n6 (C:\Users\EderV\0880\node_modules\next\dist\compiled\next-server\app-page.runtime.prod.js:2:101560)
+Error occurred prerendering page "/login". Read more: https://nextjs.org/docs/messages/prerender-error
+Export encountered an error on /login/page: /login, exiting the build.
+ Ô¿» Next.js build worker exited with code: 1 and signal: null

@@ -1,0 +1,12 @@
+­ƒÜÇ Iniciando migraci├│n de productos desde constants.js...
+ÔØî Error durante la migraci├│n: TypeError: (0 , import_auth.auth) is not a function
+    at ensureAdmin (C:\Users\EderV\0880\lib\server-actions.ts:9:25)
+    at migrateFromConstants (C:\Users\EderV\0880\lib\server-actions.ts:265:25)
+    at main (C:\Users\EderV\0880\run_migration.ts:6:26)
+    at <anonymous> (C:\Users\EderV\0880\run_migration.ts:15:1)
+    at Object.<anonymous> (C:\Users\EderV\0880\run_migration.ts:15:6)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Object.transformer (C:\Users\EderV\0880\node_modules\tsx\dist\register-D46fvsV_.cjs:3:1104)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at cjsLoader (node:internal/modules/esm/translators:346:17)

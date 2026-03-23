@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import Image from 'next/image';
 import BrandLogo from './components/BrandLogo';
@@ -9,12 +9,29 @@ import ShopSection from './components/ShopSection';
 import MobileMenu from './components/MobileMenu';
 import { productsData, translations, fadeUp, staggerChildren, whatsappNumber } from './data/constants';
 
+const defaultAdminConfig = {
+  siteName: '0880',
+  whatsappNumber,
+  currency: 'MXN',
+  hero: {
+    title1: 'Arte en',
+    title2: 'cada puntada.',
+    subtitle: 'Lujo Silencioso • Hecho a Mano • León, Gto.',
+  },
+  theme: {
+    primaryColor: '#b45309',
+    backgroundColor: '#fafafa',
+  },
+};
+
 export default function Home() {
   const [loading, setLoading] = useState(true);
   const [scrolled, setScrolled] = useState(false);
   const [language, setLanguage] = useState('es');
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [adminState, setAdminState] = useState(null);
 
   const bannerData = [
     {
@@ -36,7 +53,71 @@ export default function Home() {
   const heroOpacity = useTransform(scrollY, [0, 500], [1, 0.5]);
   const moodScale = useTransform(scrollY, [1000, 2000], [1, 1.1]);
 
-  const t = translations[language];
+  useEffect(() => {
+    let mounted = true;
+
+    const loadData = async () => {
+      try {
+        const [configRes, productsRes] = await Promise.all([
+          fetch('/api/admin/config', { cache: 'no-store' }),
+          fetch('/api/admin/products', { cache: 'no-store' }),
+        ]);
+
+        if (!mounted) return;
+
+        const configData = configRes.ok ? await configRes.json() : null;
+        const productsData = productsRes.ok ? await productsRes.json() : null;
+
+        if (mounted) {
+          setAdminState({
+            config: configData,
+            products: productsData,
+          });
+        }
+      } catch {
+        // Keep rendering with static defaults when admin data is unavailable
+      }
+    };
+
+    loadData();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const runtimeConfig = useMemo(() => {
+    if (!adminState?.config) return defaultAdminConfig;
+
+    const cfg = adminState.config;
+    return {
+      siteName: cfg.siteName || defaultAdminConfig.siteName,
+      whatsappNumber: cfg.whatsappNumber || defaultAdminConfig.whatsappNumber,
+      currency: cfg.currency || defaultAdminConfig.currency,
+      hero: {
+        title1: cfg.heroTitle1 || defaultAdminConfig.hero.title1,
+        title2: cfg.heroTitle2 || defaultAdminConfig.hero.title2,
+        subtitle: cfg.heroSubtitle || defaultAdminConfig.hero.subtitle,
+      },
+      theme: {
+        primaryColor: cfg.primaryColor || defaultAdminConfig.theme.primaryColor,
+        backgroundColor: cfg.backgroundColor || defaultAdminConfig.theme.backgroundColor,
+      },
+    };
+  }, [adminState]);
+
+  const runtimeTranslations = useMemo(() => ({
+    ...translations,
+    es: {
+      ...translations.es,
+      hero: {
+        ...translations.es.hero,
+        ...runtimeConfig.hero,
+      },
+    },
+  }), [runtimeConfig]);
+
+  const t = runtimeTranslations[language];
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -45,10 +126,20 @@ export default function Home() {
     return () => clearInterval(timer);
   }, [bannerData.length]);
 
-  const products = productsData.map(p => ({
-    ...p,
-    desc: p.desc[language]
-  }));
+  const sourceProducts = adminState?.products?.length ? adminState.products : productsData;
+  const products = sourceProducts.map((product) => {
+    // Handle both old and new product formats
+    const hasNewFormat = 'descEs' in product;
+    return {
+      ...product,
+      desc: {
+        es: hasNewFormat ? (product.descEs || '') : (product.desc?.es || ''),
+        en: hasNewFormat ? (product.descEn || product.descEs || '') : (product.desc?.en || product.desc?.es || ''),
+      },
+    };
+  });
+
+  const effectiveWhatsappNumber = runtimeConfig.whatsappNumber || whatsappNumber;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -67,6 +158,10 @@ export default function Home() {
     setLanguage(prev => prev === 'es' ? 'en' : 'es');
   };
 
+  const handleSearchChange = (value) => {
+    setSearchQuery(value);
+  };
+
   return (
     <div className="bg-brand-white font-sans text-brand-black selection:bg-brand-black selection:text-white overflow-hidden">
       {/* Mobile Menu */}
@@ -76,6 +171,8 @@ export default function Home() {
         t={t}
         language={language}
         toggleLanguage={toggleLanguage}
+        searchQuery={searchQuery}
+        onSearchChange={handleSearchChange}
       />
 
       <AnimatePresence mode="wait">
@@ -127,6 +224,21 @@ export default function Home() {
             </div>
             
             <div className="navbar-end pr-4 md:pr-8 flex gap-3 md:gap-6 items-center">
+              {/* Search - Desktop */}
+              <div className="hidden md:flex items-center border border-brand-black/20 bg-white/80 backdrop-blur-sm px-3 py-2 min-w-[220px] lg:min-w-[280px]">
+                <svg className="w-4 h-4 text-brand-black/50 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m1.1-4.4a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
+                </svg>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  placeholder={language === 'es' ? 'Buscar modelo, color o colección...' : 'Search model, color or collection...'}
+                  className="w-full bg-transparent text-[11px] tracking-wide outline-none placeholder:text-brand-black/40"
+                  aria-label={language === 'es' ? 'Buscar en catálogo' : 'Search catalog'}
+                />
+              </div>
+
               {/* Language Toggle - Desktop */}
               <button 
                 onClick={toggleLanguage}
@@ -186,9 +298,9 @@ export default function Home() {
                   </motion.h1>
                 </div>
                 <div className="overflow-hidden mb-8 md:mb-12">
-                   <motion.h1 variants={fadeUp} className="text-5xl sm:text-6xl md:text-8xl lg:text-9xl font-serif italic font-light tracking-tighter leading-[0.85] drop-shadow-2xl">
+                   <motion.span variants={fadeUp} className="text-5xl sm:text-6xl md:text-8xl lg:text-9xl font-serif italic font-light tracking-tighter leading-[0.85] drop-shadow-2xl block">
                     {t.hero.title2}
-                  </motion.h1>
+                  </motion.span>
                 </div>
                 
                 <motion.p variants={fadeUp} className="text-xs sm:text-sm md:text-lg font-light tracking-[0.2em] sm:tracking-[0.3em] uppercase max-w-lg mx-auto text-brand-grey mb-12 md:mb-16 border-t border-white/20 pt-6 md:pt-8">
@@ -291,7 +403,7 @@ export default function Home() {
                        className="absolute -top-12 -left-4 md:-left-12 w-48 h-64 md:w-64 md:h-80 z-0 bg-stone-200 overflow-hidden shadow-xl"
                     >
                        <Image 
-                         src="/images/valentina.png" 
+                         src="/images/extracted/page_1_img_1.png" 
                          alt="Texture detail" 
                          fill
                          className="object-cover scale-150 grayscale opacity-40 mix-blend-multiply" 
@@ -408,9 +520,10 @@ export default function Home() {
           {/* Catalog Grid */}
           <ShopSection 
             products={products}
-            translations={translations}
+            translations={runtimeTranslations}
             language={language}
-            whatsappNumber={whatsappNumber}
+            whatsappNumber={effectiveWhatsappNumber}
+            searchQuery={searchQuery}
           />
 
           {/* Footer */}
@@ -467,7 +580,7 @@ export default function Home() {
                     </motion.a>
 
                     <motion.a 
-                      href={`https://wa.me/${whatsappNumber}`}
+                      href={`https://wa.me/${effectiveWhatsappNumber}`}
                       target="_blank"
                       rel="noreferrer"
                       whileHover={{ scale: 1.2, rotate: 5 }}
@@ -494,7 +607,7 @@ export default function Home() {
             animate={{ scale: 1 }}
             whileHover={{ scale: 1.1, rotate: 10 }}
             whileTap={{ scale: 0.9 }}
-            href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent("Hola, me gustaría recibir asesoría personalizada.")}`}
+            href={`https://wa.me/${effectiveWhatsappNumber}?text=${encodeURIComponent("Hola, me gustaría recibir asesoría personalizada.")}`}
             target="_blank" 
             rel="noreferrer"
             className="fixed bottom-4 right-4 md:bottom-8 md:right-8 z-50 bg-black text-white rounded-full p-3 md:p-4 shadow-[0_0_30px_rgba(0,0,0,0.3)] hover:bg-brand-grey hover:text-black transition-colors duration-300 group"

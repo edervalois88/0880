@@ -4,7 +4,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import BrandLogo from './BrandLogo';
 
-const MobileMenu = ({ isOpen, onClose, t, language, toggleLanguage }) => {
+const MobileMenu = ({ isOpen, onClose, t, language, toggleLanguage, searchQuery, onSearchChange }) => {
   return (
     <AnimatePresence>
       {isOpen && (
@@ -46,6 +46,27 @@ const MobileMenu = ({ isOpen, onClose, t, language, toggleLanguage }) => {
 
               {/* Navigation Links */}
               <nav className="flex-1 overflow-y-auto py-8 px-6">
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.05 }}
+                  className="mb-6"
+                >
+                  <div className="flex items-center border border-brand-black/20 bg-white px-3 py-3">
+                    <svg className="w-4 h-4 text-brand-black/50 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m1.1-4.4a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
+                    </svg>
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => onSearchChange(e.target.value)}
+                      placeholder={language === 'es' ? 'Buscar en catálogo...' : 'Search catalog...'}
+                      className="w-full bg-transparent text-xs tracking-wide outline-none placeholder:text-brand-black/40"
+                      aria-label={language === 'es' ? 'Buscar en catálogo' : 'Search catalog'}
+                    />
+                  </div>
+                </motion.div>
+
                 <ul className="space-y-2">
                   <motion.li
                     initial={{ opacity: 0, x: 20 }}
