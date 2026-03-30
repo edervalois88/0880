@@ -1,9 +1,9 @@
-import type { AuthOptions } from "next-auth"
+import type { NextAuthConfig } from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 
-export const authConfig: AuthOptions = {
+export const authConfig: NextAuthConfig = {
   secret: process.env.NEXTAUTH_SECRET,
   providers: [
     Credentials({

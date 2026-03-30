@@ -1,11 +1,10 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authConfig } from '@/auth.config'
+import { auth } from '@/auth'
 
 async function ensureAdmin(request: NextRequest) {
-  const session = await getServerSession(authConfig)
-  if (!session?.user || session.user.role !== 'admin') {
+  const session = await auth()
+  if (!session?.user || (session.user as any).role !== 'admin') {
     return null
   }
   return session
