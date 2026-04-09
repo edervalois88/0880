@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import { env } from "@/lib/env"
 import { NextResponse } from "next/server"
 
 export async function GET() {
@@ -9,7 +10,7 @@ export async function GET() {
     return NextResponse.json({
       status: "healthy",
       database: "connected",
-      environment: process.env.NODE_ENV,
+      environment: env.NODE_ENV,
       message: "0880 Backend is running correctly",
       stats: {
         users: userCount
@@ -23,7 +24,7 @@ export async function GET() {
         status: "unhealthy", 
         database: "disconnected",
         error: error instanceof Error ? error.message : "Unknown error",
-        environment: process.env.NODE_ENV,
+        environment: env.NODE_ENV,
       },
       { status: 503 }
     )

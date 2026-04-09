@@ -1,7 +1,14 @@
 import { PrismaClient } from "@prisma/client"
+import { env } from "@/lib/env"
 
 const prismaClientSingleton = () => {
-  return new PrismaClient()
+  return new PrismaClient({
+    datasources: {
+      db: {
+        url: env.DATABASE_URL,
+      },
+    },
+  })
 }
 
 type PrismaClientSingleton = ReturnType<typeof prismaClientSingleton>
