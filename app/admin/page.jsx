@@ -5,9 +5,10 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Settings, Image as ImageIcon, Layout, Type, Palette, Save, Eye, Plus, Trash2, Home, CheckCircle, Edit2, X, Search, LogOut, Users, Database, TrendingUp, ShoppingCart, DollarSign, Package, Box, EyeOff, Activity } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, AreaChart, Area } from 'recharts';
 import toast, { Toaster } from 'react-hot-toast';
 import Image from 'next/image';
+import { translations } from '@/app/data/constants';
 import {
   getProducts,
   createProduct,
@@ -57,6 +58,22 @@ export default function AdminDashboard() {
   const [isAdjustingStock, setIsAdjustingStock] = useState(false);
   const [selectedProductForInventory, setSelectedProductForInventory] = useState(null);
   const [inventoryAdjustment, setInventoryAdjustment] = useState({ type: 'IN', quantity: 1, reason: '' });
+  const [language, setLanguage] = useState('es');
+  const [lastOrderCount, setLastOrderCount] = useState(0);
+
+  const t = translations[language].admin;
+  const tc = translations[language].catalog;
+
+  // Sound effect for new sales
+  const playNotification = () => {
+    try {
+      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+      audio.volume = 0.5;
+      audio.play();
+    } catch (e) {
+      console.error('Audio play failed', e);
+    }
+  };
 
   // Check authentication
   useEffect(() => {
@@ -93,6 +110,39 @@ export default function AdminDashboard() {
 
     loadAdminData();
   }, [status]);
+
+  // Auto-refresh logic (every 60 seconds)
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+
+    const interval = setInterval(async () => {
+      try {
+        const statsData = await getDashboardStats();
+        if (statsData) {
+          // Check for new sales
+          if (lastOrderCount > 0 && statsData.orderCount > lastOrderCount) {
+            playNotification();
+            toast.success(t.alerts.newSale.replace('{id}', 'Stripe'), {
+              icon: '💰',
+              duration: 5000,
+            });
+          }
+          setDashboardStats(statsData);
+          setLastOrderCount(statsData.orderCount);
+        }
+      } catch (error) {
+        console.error('Auto-refresh failed', error);
+      }
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [status, lastOrderCount, t.alerts.newSale]);
+
+  // Handle language sync with root (optional, or just local)
+  useEffect(() => {
+    const savedLang = localStorage.getItem('language');
+    if (savedLang) setLanguage(savedLang);
+  }, []);
 
   const handleSave = async () => {
     if (!session?.user) return;
@@ -346,18 +396,60 @@ export default function AdminDashboard() {
                   exit={{ opacity: 0, y: -10 }}
                   className="space-y-6"
                 >
+                  {/* Alerts / Notification Center */}
+                  <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
+                    <div className="bg-amber-50 px-6 py-3 border-b border-amber-100 flex items-center justify-between">
+                      <h3 className="text-[10px] font-bold uppercase tracking-widest text-amber-900 flex items-center gap-2">
+                        <Activity size={14} />
+                        {t.alerts.title}
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-ping"></div>
+                        <span className="text-[9px] text-amber-700 font-medium uppercase tracking-tighter">Live Monitor</span>
+                      </div>
+                    </div>
+                    <div className="p-4 space-y-3">
+                      {dashboardStats?.lowStockProducts?.map((product, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-3 bg-red-50 border border-red-100 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-10 relative rounded overflow-hidden">
+                              <Image src={product.image} fill className="object-cover" alt="" />
+                            </div>
+                            <p className="text-xs font-medium text-red-900">
+                              {t.alerts.lowStock.replace('{name}', product.name).replace('{stock}', product.stock)}
+                            </p>
+                          </div>
+                          <button 
+                            onClick={() => {
+                              setSelectedProductForInventory(product);
+                              setActiveTab('inventory');
+                            }}
+                            className="bg-white px-3 py-1.5 rounded text-[9px] font-bold uppercase tracking-widest text-red-700 border border-red-200 hover:bg-red-50 transition-colors"
+                          >
+                            Reabastecer
+                          </button>
+                        </div>
+                      ))}
+                      {dashboardStats?.lowStockCount === 0 && (
+                        <p className="text-center py-4 text-xs text-stone-400 font-light italic">
+                          {t.alerts.noAlerts}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
                   {/* KPI Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
+                    <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm hover:border-amber-200 transition-colors group">
                       <div className="flex justify-between items-start mb-4">
-                        <div className="p-2 bg-stone-100 rounded-lg text-stone-600">
+                        <div className="p-2 bg-stone-100 rounded-lg text-stone-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
                           <DollarSign size={20} />
                         </div>
-                        <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full uppercase tracking-tighter">Actualizado</span>
+                        <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full uppercase tracking-tighter">Live</span>
                       </div>
-                      <p className="text-xs text-stone-500 uppercase tracking-widest font-semibold">Ventas Totales</p>
+                      <p className="text-xs text-stone-500 uppercase tracking-widest font-semibold">{t.stats.totalSales}</p>
                       <h3 className="text-2xl font-serif text-stone-900 mt-1">${dashboardStats?.totalSales?.toLocaleString() || 0}</h3>
-                      <p className="text-[10px] text-stone-400 mt-2">Métrica histórica bruta</p>
+                      <p className="text-[10px] text-stone-400 mt-2">Historical Gross revenue</p>
                     </div>
 
                     <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
@@ -366,82 +458,127 @@ export default function AdminDashboard() {
                           <ShoppingCart size={20} />
                         </div>
                       </div>
-                      <p className="text-xs text-stone-500 uppercase tracking-widest font-semibold">Pedidos</p>
+                      <p className="text-xs text-stone-500 uppercase tracking-widest font-semibold">{t.stats.orders}</p>
                       <h3 className="text-2xl font-serif text-stone-900 mt-1">{dashboardStats?.orderCount || 0}</h3>
-                      <p className="text-[10px] text-stone-400 mt-2">Transacciones exitosas</p>
+                      <p className="text-[10px] text-stone-400 mt-2">Successful transactions</p>
                     </div>
 
                     <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
                       <div className="flex justify-between items-start mb-4">
                         <div className="p-2 bg-stone-100 rounded-lg text-stone-600">
-                          <Activity size={20} />
+                          <TrendingUp size={20} />
                         </div>
                       </div>
-                      <p className="text-xs text-stone-500 uppercase tracking-widest font-semibold">Ticket Promedio</p>
+                      <p className="text-xs text-stone-500 uppercase tracking-widest font-semibold">{t.stats.aov}</p>
                       <h3 className="text-2xl font-serif text-stone-900 mt-1">${dashboardStats?.aov?.toLocaleString() || 0}</h3>
-                      <p className="text-[10px] text-stone-400 mt-2">Valor por carrito (AOV)</p>
+                      <p className="text-[10px] text-stone-400 mt-2">Avg. Value per cart</p>
                     </div>
 
                     <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
                       <div className="flex justify-between items-start mb-4">
-                        <div className="p-2 bg-red-50 rounded-lg text-red-600">
+                        <div className={`p-2 rounded-lg ${dashboardStats?.lowStockCount > 0 ? 'bg-red-50 text-red-600' : 'bg-stone-100 text-stone-600'}`}>
                           <Package size={20} />
                         </div>
                         {dashboardStats?.lowStockCount > 0 && (
-                          <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-1 rounded-full uppercase tracking-tighter">Crítico</span>
+                          <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-1 rounded-full uppercase tracking-tighter">Action</span>
                         )}
                       </div>
-                      <p className="text-xs text-stone-500 uppercase tracking-widest font-semibold">Bajo Stock</p>
+                      <p className="text-xs text-stone-500 uppercase tracking-widest font-semibold">{t.stats.lowStock}</p>
                       <h3 className="text-2xl font-serif text-stone-900 mt-1">{dashboardStats?.lowStockCount || 0}</h3>
-                      <p className="text-[10px] text-stone-400 mt-2">Productos con menos de 3 un.</p>
+                      <p className="text-[10px] text-stone-400 mt-2">Critically low items</p>
                     </div>
                   </div>
 
                   {/* Charts & Lists */}
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Sales Chart */}
-                    <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
-                      <h3 className="text-sm font-bold uppercase tracking-wider mb-8 text-stone-800 flex items-center gap-2">
-                        <TrendingUp size={16} className="text-amber-600" />
-                        Ventas últimos 7 días
+                    <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-stone-200 shadow-sm relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-4 opacity-5">
+                         <TrendingUp size={120} />
+                      </div>
+                      
+                      <h3 className="text-sm font-bold uppercase tracking-wider mb-8 text-stone-800 flex items-center justify-between">
+                        <span className="flex items-center gap-2">
+                          <Activity size={16} className="text-amber-600" />
+                          Ingresos Recientes (7d)
+                        </span>
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2.5 h-2.5 rounded-full bg-amber-600"></div>
+                            <span className="text-[10px] font-medium text-stone-500">Ventas</span>
+                          </div>
+                        </div>
                       </h3>
-                      <div className="h-[300px] w-full">
+                      
+                      <div className="h-[280px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={dashboardStats?.salesByDay || []}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#6B7280'}} dy={10} />
-                            <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#6B7280'}} tickFormatter={(val) => `$${val/1000}k`} />
-                            <Tooltip 
-                              cursor={{fill: '#F9FAFB'}}
-                              contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
+                          <AreaChart data={dashboardStats?.salesByDay || []}>
+                            <defs>
+                              <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#d97706" stopOpacity={0.1}/>
+                                <stop offset="95%" stopColor="#d97706" stopOpacity={0}/>
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f1f1" />
+                            <XAxis 
+                              dataKey="name" 
+                              axisLine={false} 
+                              tickLine={false} 
+                              tick={{fontSize: 10, fill: '#A3A3A3'}} 
+                              dy={10} 
                             />
-                            <Bar dataKey="ventas" fill="#000" radius={[4, 4, 0, 0]} barSize={40} />
-                          </BarChart>
+                            <YAxis 
+                              axisLine={false} 
+                              tickLine={false} 
+                              tick={{fontSize: 10, fill: '#A3A3A3'}} 
+                              tickFormatter={(val) => `$${val/1000}k`} 
+                            />
+                            <Tooltip 
+                              cursor={{stroke: '#d97706', strokeWidth: 1}}
+                              contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)', padding: '12px'}}
+                            />
+                            <Area 
+                              type="monotone" 
+                              dataKey="ventas" 
+                              stroke="#d97706" 
+                              strokeWidth={3}
+                              fillOpacity={1} 
+                              fill="url(#colorSales)" 
+                              animationDuration={2000}
+                            />
+                          </AreaChart>
                         </ResponsiveContainer>
                       </div>
                     </div>
 
-                    {/* Top Products */}
+                    {/* Activity Feed */}
                     <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
-                      <h3 className="text-sm font-bold uppercase tracking-wider mb-6 text-stone-800">Top Productos</h3>
+                      <h3 className="text-sm font-bold uppercase tracking-wider mb-6 text-stone-800 flex items-center gap-2">
+                        <Activity size={16} className="text-amber-600" />
+                        Actividad Reciente
+                      </h3>
                       <div className="space-y-4">
-                        {dashboardStats?.topProducts?.map((product, idx) => (
-                          <div key={idx} className="flex items-center gap-3 p-3 rounded-lg hover:bg-stone-50 transition-colors">
-                            <div className="w-6 h-6 rounded-full bg-stone-900 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
-                              {idx + 1}
-                            </div>
+                        {dashboardStats?.recentActivity?.map((activity, idx) => (
+                          <div key={idx} className="flex gap-3 p-2 group hover:bg-stone-50 rounded-lg transition-colors">
+                            <div className={`w-1 h-10 rounded-full shrink-0 ${activity.type === 'SALE' ? 'bg-green-500' : 'bg-stone-200'}`}></div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-semibold text-stone-900 truncate uppercase tracking-tighter">{product.name}</p>
-                              <p className="text-[10px] text-stone-500">{product.ventas} unidades</p>
+                              <p className="text-[10px] font-bold text-stone-900 uppercase tracking-tighter truncate">
+                                {activity.product.name}
+                              </p>
+                              <p className="text-[10px] text-stone-500 mt-0.5">
+                                {activity.type === 'SALE' ? 'Venta' : activity.reason}
+                              </p>
+                              <p className="text-[8px] text-stone-400 mt-1 uppercase">
+                                {new Date(activity.createdAt).toLocaleDateString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+                              </p>
                             </div>
-                            <div className="text-right">
-                              <p className="text-xs font-bold font-serif">${product.total?.toLocaleString()}</p>
+                            <div className="text-right flex flex-col items-end">
+                              <span className={`text-[10px] font-bold ${activity.type === 'SALE' ? 'text-green-600' : 'text-stone-400'}`}>
+                                {activity.type === 'SALE' ? `-1` : activity.type === 'IN' ? `+${activity.quantity}` : `-${activity.quantity}`}
+                              </span>
                             </div>
                           </div>
                         ))}
-                        {(!dashboardStats?.topProducts || dashboardStats.topProducts.length === 0) && (
-                          <div className="py-10 text-center text-stone-400 text-xs">Aún no hay ventas registradas</div>
-                        )}
                       </div>
                     </div>
                   </div>

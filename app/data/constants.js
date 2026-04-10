@@ -743,6 +743,33 @@ export const translations = {
       text: "Bolsas artesanales 100% mexicanas que trascienden la moda. Hecho con corazón en León, Guanajuato.",
       explore: "Explorar",
       social: "Social"
+    },
+    admin: {
+      dashboard: "Panel de Control",
+      inventory: "Inventario",
+      catalog: "Catálogo",
+      users: "Usuarios",
+      stats: {
+        totalSales: "Ventas Totales",
+        aov: "Ticket Promedio",
+        orders: "Pedidos",
+        lowStock: "Stock Bajo"
+      },
+      alerts: {
+        title: "Centro de Notificaciones",
+        lowStock: "¡Atención! {name} tiene solo {stock} unidades.",
+        newSale: "Nueva venta procesada: {id}",
+        noAlerts: "No hay alertas críticas en este momento.",
+        unpublished: "Producto oculto: {name}"
+      },
+      common: {
+        save: "Guardar",
+        cancel: "Cancelar",
+        loading: "Cargando...",
+        refreshing: "Actualizando datos...",
+        search: "Buscar...",
+        actions: "Acciones"
+      }
     }
   },
   en: {
@@ -775,12 +802,40 @@ export const translations = {
       all: "All",
       filter: "Filter by collection:",
       showing: "Showing",
-      products: "products"
+      products: "products",
+      soldOut: "Sold Out"
     },
     footer: {
       text: "100% Mexican handcrafted bags that transcend fashion. Made with heart in León, Guanajuato.",
       explore: "Explore",
       social: "Social"
+    },
+    admin: {
+      dashboard: "Admin Dashboard",
+      inventory: "Inventory",
+      catalog: "Catalog",
+      users: "Users",
+      stats: {
+        totalSales: "Total Sales",
+        aov: "Avg. Order Value",
+        orders: "Orders",
+        lowStock: "Low Stock"
+      },
+      alerts: {
+        title: "Notification Center",
+        lowStock: "Attention! {name} has only {stock} units left.",
+        newSale: "New sale processed: {id}",
+        noAlerts: "No critical alerts at this time.",
+        unpublished: "Hidden product: {name}"
+      },
+      common: {
+        save: "Save",
+        cancel: "Cancel",
+        loading: "Loading...",
+        refreshing: "Updating data...",
+        search: "Search...",
+        actions: "Actions"
+      }
     }
   }
 };

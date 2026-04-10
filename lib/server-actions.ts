@@ -376,6 +376,19 @@ export async function getDashboardStats() {
       _count: { id: true },
     })
 
+    // 6. Productos con bajo stock (detalles para widget de alertas)
+    const lowStockProducts = await prisma.product.findMany({
+      where: { stock: { lte: 3 } },
+      select: { id: true, name: true, stock: true, image: true }
+    })
+
+    // 7. Actividad reciente (últimos 5 movimientos o pedidos)
+    const recentActivity = await prisma.inventoryMovement.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      include: { product: { select: { name: true } } }
+    })
+
     return {
       totalSales: salesSum,
       orderCount,
@@ -383,7 +396,9 @@ export async function getDashboardStats() {
       salesByDay,
       topProducts,
       statsByCollection,
-      lowStockCount: await prisma.product.count({ where: { stock: { lte: 3 } } }),
+      lowStockCount: lowStockProducts.length,
+      lowStockProducts,
+      recentActivity,
     }
   } catch (error) {
     console.error('Stats error:', error)

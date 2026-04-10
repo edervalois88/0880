@@ -9,6 +9,7 @@ const ShopSection = ({ products, translations, language, whatsappNumber, searchQ
   const [selectedCollection, setSelectedCollection] = useState('all');
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
+  const [modalImageLoaded, setModalImageLoaded] = useState(false);
   
   const t = translations[language];
 
@@ -91,7 +92,7 @@ const ShopSection = ({ products, translations, language, whatsappNumber, searchQ
       }
     } catch (error) {
       console.error('Checkout error:', error);
-      alert('Hubo un error al procesar el pago. Por favor intenta de nuevo.');
+      toast.error(language === 'es' ? 'Error al procesar el pago. Intenta de nuevo.' : 'Error processing payment. Try again.');
     } finally {
       setIsCheckoutLoading(false);
     }

@@ -33,10 +33,15 @@ const ProductCard = ({ product, index, language, onQuickView }) => {
         </motion.div>
         
         {/* Subtle Collection Badge */}
-        <div className="absolute top-4 left-4 flex gap-2">
+        <div className="absolute top-4 left-4 flex flex-col gap-2">
           <span className="bg-white/80 backdrop-blur-md text-brand-black px-3 py-1 text-[8px] font-medium uppercase tracking-[0.25em]">
             {product.collection}
           </span>
+          {product.stock <= 0 && (
+            <span className="bg-red-600 text-white px-3 py-1 text-[8px] font-bold uppercase tracking-[0.25em] shadow-lg">
+              {language === 'es' ? 'Agotado' : 'Sold Out'}
+            </span>
+          )}
         </div>
 
         {/* Hover Action Overlay */}
