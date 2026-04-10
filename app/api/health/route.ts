@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma"
 import { env } from "@/lib/env"
 import { NextResponse } from "next/server"
+import { logger } from "@/lib/logger"
 
 export async function GET() {
   try {
@@ -18,7 +19,7 @@ export async function GET() {
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error("Health check failed:", error)
+    logger.error({ error }, "Health check failed")
     return NextResponse.json(
       { 
         status: "unhealthy", 

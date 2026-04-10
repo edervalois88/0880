@@ -1,30 +1,15 @@
-import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
-
-async function ensureAdmin(request: NextRequest) {
-  const session = await auth()
-  if (!session?.user || (session.user as any).role !== 'admin') {
-    return null
-  }
-  return session
-}
+import { ensureAdmin } from '@/lib/auth-utils'
+import { ConfigService } from '@/services/config.service'
+import { logger } from '@/lib/logger'
 
 // GET /api/admin/config
 export async function GET(request: NextRequest) {
   try {
-    let config = await prisma.config.findUnique({
-      where: { id: 'singleton' },
-    })
-
-    if (!config) {
-      config = await prisma.config.create({
-        data: { id: 'singleton' },
-      })
-    }
-
+    const config = await ConfigService.get()
     return NextResponse.json(config)
   } catch (error) {
+    logger.error({ error }, 'GET /api/admin/config failed')
     return NextResponse.json(
       { error: 'Error fetching config' },
       { status: 500 }
@@ -41,39 +26,15 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-
-    const oldConfig = await prisma.config.findUnique({
-      where: { id: 'singleton' },
-    })
-
-    const config = await prisma.config.update({
-      where: { id: 'singleton' },
-      data: {
-        siteName: body.siteName,
-        whatsappNumber: body.whatsappNumber,
-        currency: body.currency,
-        heroTitle1: body.heroTitle1,
-        heroTitle2: body.heroTitle2,
-        heroSubtitle: body.heroSubtitle,
-        primaryColor: body.primaryColor,
-        backgroundColor: body.backgroundColor,
-        updatedBy: session.user.email as string,
-      },
-    })
-
-    // Audit log
-    await prisma.auditLog.create({
-      data: {
-        userId: session.user.id as string,
-        action: 'UPDATE',
-        resource: 'Config',
-        resourceId: 'singleton',
-        changes: JSON.stringify({ before: oldConfig, after: config }),
-      },
-    })
+    const config = await ConfigService.update(
+      body, 
+      session.user.id as string,
+      session.user.email as string
+    )
 
     return NextResponse.json(config)
   } catch (error) {
+    logger.error({ error }, 'PUT /api/admin/config failed')
     return NextResponse.json(
       { error: 'Error updating config' },
       { status: 500 }

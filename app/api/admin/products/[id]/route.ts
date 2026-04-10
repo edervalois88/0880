@@ -1,14 +1,7 @@
-import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
-
-async function ensureAdmin(request: NextRequest) {
-  const session = await auth()
-  if (!session?.user || (session.user as any).role !== 'admin') {
-    return null
-  }
-  return session
-}
+import { ensureAdmin } from '@/lib/auth-utils'
+import { ProductService } from '@/services/product.service'
+import { logger } from '@/lib/logger'
 
 // PUT /api/admin/products/[id]
 export async function PUT(
@@ -25,44 +18,15 @@ export async function PUT(
     const paramsResolved = await params
     const id = parseInt(paramsResolved.id)
 
-    const oldProduct = await prisma.product.findUnique({ where: { id } })
-    if (!oldProduct) {
-      return NextResponse.json(
-        { error: 'Product not found' },
-        { status: 404 }
-      )
-    }
-
-    const product = await prisma.product.update({
-      where: { id },
-      data: {
-        name: body.name,
-        collection: body.collection,
-        price: parseInt(body.price),
-        image: body.image,
-        color: body.color,
-        design: body.design,
-        descEs: body.descEs || '',
-        descEn: body.descEn || '',
-      },
-    })
-
-    // Audit log
-    await prisma.auditLog.create({
-      data: {
-        userId: session.user.id as string,
-        action: 'UPDATE',
-        resource: 'Product',
-        resourceId: id.toString(),
-        changes: JSON.stringify({ before: oldProduct, after: product }),
-      },
-    })
+    const product = await ProductService.update(id, body, session.user.id as string)
 
     return NextResponse.json(product)
   } catch (error) {
+    logger.error({ error }, `PUT /api/admin/products/[id] failed`)
+    const status = error instanceof Error && error.message === 'Product not found' ? 404 : 500
     return NextResponse.json(
-      { error: 'Error updating product' },
-      { status: 500 }
+      { error: error instanceof Error ? error.message : 'Error updating product' },
+      { status }
     )
   }
 }
@@ -81,32 +45,15 @@ export async function DELETE(
     const paramsResolved = await params
     const id = parseInt(paramsResolved.id)
 
-    const product = await prisma.product.findUnique({ where: { id } })
-    if (!product) {
-      return NextResponse.json(
-        { error: 'Product not found' },
-        { status: 404 }
-      )
-    }
-
-    await prisma.product.delete({ where: { id } })
-
-    // Audit log
-    await prisma.auditLog.create({
-      data: {
-        userId: session.user.id as string,
-        action: 'DELETE',
-        resource: 'Product',
-        resourceId: id.toString(),
-        changes: JSON.stringify(product),
-      },
-    })
+    await ProductService.delete(id, session.user.id as string)
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    logger.error({ error }, `DELETE /api/admin/products/[id] failed`)
+    const status = error instanceof Error && error.message === 'Product not found' ? 404 : 500
     return NextResponse.json(
-      { error: 'Error deleting product' },
-      { status: 500 }
+      { error: error instanceof Error ? error.message : 'Error deleting product' },
+      { status }
     )
   }
 }
