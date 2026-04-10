@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   // Manejar el evento
   switch (event.type) {
     case 'checkout.session.completed':
-      const session = event.data.object as Stripe.Checkout.Session;
+      const session = event.data.object as any;
       const productId = parseInt(session.metadata?.productId || '0');
       
       if (productId > 0) {
