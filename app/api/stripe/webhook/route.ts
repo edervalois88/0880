@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-01-27-ac',
+  apiVersion: '2026-03-25.dahlia',
 });
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
