@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, Image as ImageIcon, Layout, Type, Palette, Save, Eye, Plus, Trash2, Home, CheckCircle, Edit2, X, Search, LogOut } from 'lucide-react';
+import { Settings, Image as ImageIcon, Layout, Type, Palette, Save, Eye, Plus, Trash2, Home, CheckCircle, Edit2, X, Search, LogOut, Users, Database, TrendingUp, ShoppingCart, DollarSign, Package, Box, EyeOff, Activity } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import toast, { Toaster } from 'react-hot-toast';
 import Image from 'next/image';
 import {
@@ -14,6 +15,14 @@ import {
   deleteProduct,
   getConfig,
   updateConfig,
+  getUsers,
+  updateUserRole,
+  toggleUserActive,
+  migrateFromConstants,
+  getDashboardStats,
+  getInventoryLogs,
+  addInventoryMovement,
+  toggleProductVisibility,
 } from '@/lib/server-actions';
 
 const defaultConfig = {
@@ -34,13 +43,20 @@ const defaultConfig = {
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('catalog');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [products, setProducts] = useState([]);
+  const [users, setUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [editingProduct, setEditingProduct] = useState(null);
   const [config, setConfig] = useState(defaultConfig);
+  const [isMigrating, setIsMigrating] = useState(false);
+  const [dashboardStats, setDashboardStats] = useState(null);
+  const [inventoryLogs, setInventoryLogs] = useState([]);
+  const [isAdjustingStock, setIsAdjustingStock] = useState(false);
+  const [selectedProductForInventory, setSelectedProductForInventory] = useState(null);
+  const [inventoryAdjustment, setInventoryAdjustment] = useState({ type: 'IN', quantity: 1, reason: '' });
 
   // Check authentication
   useEffect(() => {
@@ -55,13 +71,19 @@ export default function AdminDashboard() {
 
     const loadAdminData = async () => {
       try {
-        const [productsData, configData] = await Promise.all([
+        const [productsData, configData, usersData, statsData, logsData] = await Promise.all([
           getProducts(),
           getConfig(),
+          getUsers(),
+          getDashboardStats(),
+          getInventoryLogs(),
         ]);
 
         setProducts(productsData || []);
         setConfig(configData || defaultConfig);
+        setUsers(usersData || []);
+        setDashboardStats(statsData || null);
+        setInventoryLogs(logsData || []);
       } catch (error) {
         toast.error('No se pudo cargar la configuración.');
       } finally {
@@ -109,6 +131,8 @@ export default function AdminDashboard() {
       image: editingProduct.image,
       descEs: editingProduct.descEs || '',
       descEn: editingProduct.descEn || editingProduct.descEs || '',
+      stock: parseInt(editingProduct.stock) || 0,
+      published: !!editingProduct.published,
     };
 
     try {
@@ -140,12 +164,95 @@ export default function AdminDashboard() {
   };
 
   const navItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: TrendingUp },
+    { id: 'catalog', label: 'Catálogo', icon: Layout },
+    { id: 'inventory', label: 'Inventario', icon: Box },
+    { id: 'users', label: 'Usuarios', icon: Users },
     { id: 'general', label: 'General', icon: Settings },
     { id: 'hero', label: 'Hero & Textos', icon: Type },
     { id: 'theme', label: 'Apariencia', icon: Palette },
-    { id: 'catalog', label: 'Catálogo', icon: Layout },
     { id: 'media', label: 'Multimedia', icon: ImageIcon },
   ];
+ 
+  const handleMigrate = async () => {
+    if (!confirm('¿Deseas migrar los productos desde el archivo constants.js? Esto reemplazará el catálogo actual.')) return;
+    
+    setIsMigrating(true);
+    try {
+      const result = await migrateFromConstants();
+      if (result.success) {
+        toast.success(`Migración exitosa: ${result.count} productos importados.`);
+        const updatedProducts = await getProducts();
+        setProducts(updatedProducts);
+      }
+    } catch (error) {
+      toast.error('Error durante la migración.');
+    } finally {
+      setIsMigrating(false);
+    }
+  };
+
+  const handleToggleUserStatus = async (userId, currentStatus) => {
+    try {
+      await toggleUserActive(userId, !currentStatus);
+      setUsers(users.map(u => u.id === userId ? { ...u, active: !currentStatus } : u));
+      toast.success('Estado de usuario actualizado.');
+    } catch (error) {
+      toast.error('Error al actualizar usuario.');
+    }
+  };
+
+  const handleUpdateRole = async (userId, newRole) => {
+    try {
+      await updateUserRole(userId, newRole);
+      setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
+      toast.success('Rol actualizado.');
+    } catch (error) {
+      toast.error('Error al actualizar rol.');
+    }
+  };
+
+  const handleToggleVisibility = async (id, currentStatus) => {
+    try {
+      await toggleProductVisibility(id, !currentStatus);
+      setProducts(products.map(p => p.id === id ? { ...p, published: !currentStatus } : p));
+      toast.success('Visibilidad actualizada');
+    } catch (error) {
+      toast.error('Error al cambiar visibilidad');
+    }
+  };
+
+  const handleAdjustStock = async (e) => {
+    e.preventDefault();
+    if (!selectedProductForInventory) return;
+    
+    setIsAdjustingStock(true);
+    try {
+      await addInventoryMovement({
+        productId: selectedProductForInventory.id,
+        type: inventoryAdjustment.type,
+        quantity: parseInt(inventoryAdjustment.quantity),
+        reason: inventoryAdjustment.reason || (inventoryAdjustment.type === 'IN' ? 'Entrada manual' : 'Salida manual')
+      });
+      
+      // Update local state
+      const diff = inventoryAdjustment.type === 'IN' ? parseInt(inventoryAdjustment.quantity) : -parseInt(inventoryAdjustment.quantity);
+      setProducts(products.map(p => p.id === selectedProductForInventory.id ? { ...p, stock: p.stock + diff } : p));
+      
+      // Refresh logs
+      const newLogs = await getInventoryLogs();
+      setInventoryLogs(newLogs);
+      
+      toast.success('Inventario actualizado');
+      setSelectedProductForInventory(null);
+      setInventoryAdjustment({ type: 'IN', quantity: 1, reason: '' });
+    } catch (error) {
+      console.error(error);
+      toast.error('Error al ajustar inventario');
+    } finally {
+      setIsAdjustingStock(false);
+    }
+  };
 
   const filteredProducts = products.filter(p => 
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -228,8 +335,118 @@ export default function AdminDashboard() {
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-4 md:p-8">
-          <div className={`${activeTab === 'catalog' ? 'max-w-6xl' : 'max-w-3xl'} mx-auto`}>
+          <div className={`${activeTab === 'catalog' || activeTab === 'inventory' || activeTab === 'dashboard' ? 'max-w-6xl' : 'max-w-3xl'} mx-auto`}>
             <AnimatePresence mode="popLayout">
+              {/* DASHBOARD TAB */}
+              {activeTab === 'dashboard' && (
+                <motion.div
+                  key="dashboard"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="space-y-6"
+                >
+                  {/* KPI Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="p-2 bg-stone-100 rounded-lg text-stone-600">
+                          <DollarSign size={20} />
+                        </div>
+                        <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full uppercase tracking-tighter">Actualizado</span>
+                      </div>
+                      <p className="text-xs text-stone-500 uppercase tracking-widest font-semibold">Ventas Totales</p>
+                      <h3 className="text-2xl font-serif text-stone-900 mt-1">${dashboardStats?.totalSales?.toLocaleString() || 0}</h3>
+                      <p className="text-[10px] text-stone-400 mt-2">Métrica histórica bruta</p>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="p-2 bg-stone-100 rounded-lg text-stone-600">
+                          <ShoppingCart size={20} />
+                        </div>
+                      </div>
+                      <p className="text-xs text-stone-500 uppercase tracking-widest font-semibold">Pedidos</p>
+                      <h3 className="text-2xl font-serif text-stone-900 mt-1">{dashboardStats?.orderCount || 0}</h3>
+                      <p className="text-[10px] text-stone-400 mt-2">Transacciones exitosas</p>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="p-2 bg-stone-100 rounded-lg text-stone-600">
+                          <Activity size={20} />
+                        </div>
+                      </div>
+                      <p className="text-xs text-stone-500 uppercase tracking-widest font-semibold">Ticket Promedio</p>
+                      <h3 className="text-2xl font-serif text-stone-900 mt-1">${dashboardStats?.aov?.toLocaleString() || 0}</h3>
+                      <p className="text-[10px] text-stone-400 mt-2">Valor por carrito (AOV)</p>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="p-2 bg-red-50 rounded-lg text-red-600">
+                          <Package size={20} />
+                        </div>
+                        {dashboardStats?.lowStockCount > 0 && (
+                          <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-1 rounded-full uppercase tracking-tighter">Crítico</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-stone-500 uppercase tracking-widest font-semibold">Bajo Stock</p>
+                      <h3 className="text-2xl font-serif text-stone-900 mt-1">{dashboardStats?.lowStockCount || 0}</h3>
+                      <p className="text-[10px] text-stone-400 mt-2">Productos con menos de 3 un.</p>
+                    </div>
+                  </div>
+
+                  {/* Charts & Lists */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Sales Chart */}
+                    <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
+                      <h3 className="text-sm font-bold uppercase tracking-wider mb-8 text-stone-800 flex items-center gap-2">
+                        <TrendingUp size={16} className="text-amber-600" />
+                        Ventas últimos 7 días
+                      </h3>
+                      <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={dashboardStats?.salesByDay || []}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#6B7280'}} dy={10} />
+                            <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#6B7280'}} tickFormatter={(val) => `$${val/1000}k`} />
+                            <Tooltip 
+                              cursor={{fill: '#F9FAFB'}}
+                              contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
+                            />
+                            <Bar dataKey="ventas" fill="#000" radius={[4, 4, 0, 0]} barSize={40} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+
+                    {/* Top Products */}
+                    <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
+                      <h3 className="text-sm font-bold uppercase tracking-wider mb-6 text-stone-800">Top Productos</h3>
+                      <div className="space-y-4">
+                        {dashboardStats?.topProducts?.map((product, idx) => (
+                          <div key={idx} className="flex items-center gap-3 p-3 rounded-lg hover:bg-stone-50 transition-colors">
+                            <div className="w-6 h-6 rounded-full bg-stone-900 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                              {idx + 1}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold text-stone-900 truncate uppercase tracking-tighter">{product.name}</p>
+                              <p className="text-[10px] text-stone-500">{product.ventas} unidades</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs font-bold font-serif">${product.total?.toLocaleString()}</p>
+                            </div>
+                          </div>
+                        ))}
+                        {(!dashboardStats?.topProducts || dashboardStats.topProducts.length === 0) && (
+                          <div className="py-10 text-center text-stone-400 text-xs">Aún no hay ventas registradas</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
               {/* GENERAL TAB */}
               {activeTab === 'general' && (
                 <motion.div
@@ -348,6 +565,16 @@ export default function AdminDashboard() {
                       <Plus size={16} />
                       Nuevo Producto
                     </button>
+                    {products.length === 0 && (
+                      <button 
+                        onClick={handleMigrate}
+                        disabled={isMigrating}
+                        className="bg-stone-800 hover:bg-black text-white px-4 py-2 rounded text-xs uppercase tracking-widest font-bold transition-colors flex items-center gap-2 shrink-0 disabled:opacity-50"
+                      >
+                        <Database size={16} />
+                        {isMigrating ? 'Migrando...' : 'Migrar desde constants.js'}
+                      </button>
+                    )}
                   </div>
 
                   {/* Search and Filter */}
@@ -417,6 +644,176 @@ export default function AdminDashboard() {
                           <p>No se encontraron productos en tu búsqueda.</p>
                         </div>
                       )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* USERS TAB */}
+              {activeTab === 'users' && (
+                <motion.div
+                  key="users"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="space-y-6"
+                >
+                  <div className="flex justify-between items-center mb-6">
+                    <div>
+                      <h2 className="text-2xl font-serif text-stone-800">Gestión de Usuarios</h2>
+                      <p className="text-sm text-stone-500 mt-1">Administra accesos y roles de administradores ({users.length} usuarios).</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-stone-200 rounded-lg shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-stone-50 border-b border-stone-200 text-xs uppercase tracking-widest text-stone-500">
+                            <th className="p-4 font-semibold">Usuario</th>
+                            <th className="p-4 font-semibold">Rol</th>
+                            <th className="p-4 font-semibold">Estado</th>
+                            <th className="p-4 font-semibold text-right">Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-stone-100">
+                          {users.map((user) => (
+                            <tr key={user.id} className="hover:bg-stone-50/50 transition-colors">
+                              <td className="p-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 rounded-full bg-stone-200 flex items-center justify-center text-stone-500 text-xs">
+                                    {user.email[0].toUpperCase()}
+                                  </div>
+                                  <span className="text-sm font-medium">{user.email}</span>
+                                </div>
+                              </td>
+                              <td className="p-4">
+                                <select 
+                                  value={user.role} 
+                                  onChange={(e) => handleUpdateRole(user.id, e.target.value)}
+                                  className="text-xs border border-stone-200 rounded px-2 py-1 bg-white outline-none focus:border-amber-500"
+                                >
+                                  <option value="admin">Admin</option>
+                                  <option value="editor">Editor</option>
+                                </select>
+                              </td>
+                              <td className="p-4 text-right">
+                                <button 
+                                  onClick={() => handleToggleUserStatus(user.id, user.active)}
+                                  className={`text-xs font-bold uppercase tracking-widest px-3 py-1 rounded transition-colors ${
+                                    user.active 
+                                      ? 'text-red-600 hover:bg-red-50' 
+                                      : 'text-green-600 hover:bg-green-50'
+                                  }`}
+                                >
+                                  {user.active ? 'Desactivar' : 'Activar'}
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* INVENTORY TAB */}
+              {activeTab === 'inventory' && (
+                <motion.div
+                  key="inventory"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="space-y-6"
+                >
+                  <div className="flex justify-between items-center mb-6">
+                    <div>
+                      <h2 className="text-2xl font-serif text-stone-800">Control de Inventarios</h2>
+                      <p className="text-sm text-stone-500 mt-1">Monitorea el stock en tiempo real y gestiona la visibilidad en tienda.</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    {/* Inventory Table */}
+                    <div className="lg:col-span-3 bg-white border border-stone-200 rounded-lg shadow-sm overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="bg-stone-50 border-b border-stone-200 text-xs uppercase tracking-widest text-stone-500">
+                              <th className="p-4 font-semibold">Producto</th>
+                              <th className="p-4 font-semibold">Stock Actual</th>
+                              <th className="p-4 font-semibold">Visibilidad</th>
+                              <th className="p-4 font-semibold text-right">Ajuste</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-stone-100">
+                            {products.map((product) => (
+                              <tr key={product.id} className="hover:bg-stone-50/50 transition-colors">
+                                <td className="p-4 flex items-center gap-3">
+                                  <div className="w-8 h-10 bg-stone-100 relative shrink-0">
+                                    <Image src={product.image} fill className="object-cover" alt={product.name} />
+                                  </div>
+                                  <span className="text-sm font-semibold text-stone-800 uppercase tracking-tighter">{product.name}</span>
+                                </td>
+                                <td className="p-4">
+                                  <div className="flex items-center gap-2">
+                                    <span className={`w-2 h-2 rounded-full ${product.stock > 10 ? 'bg-green-500' : product.stock > 0 ? 'bg-amber-500' : 'bg-red-500'}`}></span>
+                                    <span className={`text-sm font-bold ${product.stock <= 3 ? 'text-red-600' : 'text-stone-800'}`}>
+                                      {product.stock} un.
+                                    </span>
+                                    {product.stock === 0 && <span className="text-[9px] uppercase font-serif italic text-red-500">Agotado</span>}
+                                  </div>
+                                </td>
+                                <td className="p-4">
+                                  <button 
+                                    onClick={() => handleToggleVisibility(product.id, product.published)}
+                                    className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-all ${
+                                      product.published 
+                                        ? 'bg-stone-900 text-white' 
+                                        : 'bg-stone-100 text-stone-400 border border-stone-200'
+                                    }`}
+                                  >
+                                    {product.published ? <Eye size={12} /> : <EyeOff size={12} />}
+                                    {product.published ? 'Visible' : 'Oculto'}
+                                  </button>
+                                </td>
+                                <td className="p-4 text-right">
+                                  <button 
+                                    onClick={() => setSelectedProductForInventory(product)}
+                                    className="p-2 hover:bg-stone-100 rounded-lg text-stone-600 transition-colors"
+                                  >
+                                    <Activity size={16} />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Stock Logs Side */}
+                    <div className="bg-white p-6 rounded-lg border border-stone-200 shadow-sm h-fit">
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-stone-800 mb-6 flex items-center gap-2">
+                        <Activity size={14} className="text-amber-600" />
+                        Movimientos Recientes
+                      </h3>
+                      <div className="space-y-6">
+                        {inventoryLogs.map((log, idx) => (
+                          <div key={idx} className="relative pl-4 border-l border-stone-100 space-y-1">
+                            <div className={`absolute left-[-5px] top-1 w-2 h-2 rounded-full ${log.type === 'IN' ? 'bg-green-500' : log.type === 'OUT' ? 'bg-red-500' : 'bg-amber-500'}`}></div>
+                            <p className="text-[10px] uppercase font-bold text-stone-900 tracking-tighter truncate">{log.product?.name}</p>
+                            <p className="text-[10px] text-stone-500">
+                              <span className={log.type === 'IN' ? 'text-green-600' : 'text-amber-600'}>
+                                {log.type === 'IN' ? '+' : '-'}{log.quantity} un.
+                              </span>
+                              {' · '}{log.reason}
+                            </p>
+                            <p className="text-[8px] text-stone-400">{new Date(log.createdAt).toLocaleString('es-MX', { hour: '2-digit', minute: '2-digit' })}</p>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </motion.div>
@@ -613,6 +1010,27 @@ export default function AdminDashboard() {
                           </div>
                         </div>
 
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-semibold text-stone-500 mb-1 uppercase tracking-wide">Stock Inicial</label>
+                            <input 
+                              type="number" required min="0"
+                              value={editingProduct.stock || 0} onChange={(e) => setEditingProduct({...editingProduct, stock: parseInt(e.target.value)})}
+                              className="w-full border border-stone-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                            />
+                          </div>
+                          <div className="flex items-center gap-3 pt-6">
+                            <input 
+                              type="checkbox"
+                              id="isPublished"
+                              checked={editingProduct.published}
+                              onChange={(e) => setEditingProduct({...editingProduct, published: e.target.checked})}
+                              className="w-4 h-4 text-amber-600 focus:ring-amber-500 border-stone-300 rounded"
+                            />
+                            <label htmlFor="isPublished" className="text-xs font-bold text-stone-700 uppercase tracking-widest cursor-pointer">Publicado</label>
+                          </div>
+                        </div>
+
                         <div>
                           <label className="block text-xs font-semibold text-stone-500 mb-1 uppercase tracking-wide">Diseño (Bordado / Variante)</label>
                           <input 
@@ -644,6 +1062,96 @@ export default function AdminDashboard() {
                     Guardar Producto
                   </button>
                 </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* INVENTORY ADJUSTMENT MODAL */}
+        <AnimatePresence>
+          {selectedProductForInventory && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+              <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                onClick={() => setSelectedProductForInventory(null)}
+              />
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden relative z-10"
+              >
+                <div className="p-6 border-b border-stone-100 flex justify-between items-center">
+                  <h3 className="font-serif text-lg">Ajuste de Inventario</h3>
+                  <button onClick={() => setSelectedProductForInventory(null)} className="text-stone-400 hover:text-black">
+                    <X size={20} />
+                  </button>
+                </div>
+                
+                <form onSubmit={handleAdjustStock} className="p-6 space-y-6">
+                  <div className="flex items-center gap-4 p-4 bg-stone-50 rounded-lg">
+                    <div className="w-12 h-16 bg-white relative border border-stone-200">
+                      <Image src={selectedProductForInventory.image} fill className="object-cover" alt="" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-widest text-stone-900">{selectedProductForInventory.name}</p>
+                      <p className="text-[10px] text-stone-500">Stock Actual: {selectedProductForInventory.stock} unidades</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <button 
+                      type="button"
+                      onClick={() => setInventoryAdjustment({...inventoryAdjustment, type: 'IN'})}
+                      className={`flex items-center justify-center gap-2 py-3 rounded-lg border font-bold text-[10px] uppercase tracking-widest transition-all ${
+                        inventoryAdjustment.type === 'IN' ? 'bg-green-50 border-green-200 text-green-700 shadow-sm' : 'border-stone-200 text-stone-400'
+                      }`}
+                    >
+                      <Plus size={14} /> Entrada
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setInventoryAdjustment({...inventoryAdjustment, type: 'OUT'})}
+                      className={`flex items-center justify-center gap-2 py-3 rounded-lg border font-bold text-[10px] uppercase tracking-widest transition-all ${
+                        inventoryAdjustment.type === 'OUT' ? 'bg-red-50 border-red-200 text-red-700 shadow-sm' : 'border-stone-200 text-stone-400'
+                      }`}
+                    >
+                      <Trash2 size={14} /> Salida
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-2">Cantidad</label>
+                      <input 
+                        type="number" 
+                        min="1"
+                        value={inventoryAdjustment.quantity}
+                        onChange={(e) => setInventoryAdjustment({...inventoryAdjustment, quantity: e.target.value})}
+                        className="w-full border border-stone-300 rounded px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500/20 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-2">Motivo / Razón</label>
+                      <input 
+                        type="text" 
+                        placeholder="Ej: Reabastecimiento, Devolución..."
+                        value={inventoryAdjustment.reason}
+                        onChange={(e) => setInventoryAdjustment({...inventoryAdjustment, reason: e.target.value})}
+                        className="w-full border border-stone-300 rounded px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500/20 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <button 
+                    type="submit"
+                    disabled={isAdjustingStock}
+                    className="w-full bg-black text-white py-4 rounded-lg text-xs font-bold uppercase tracking-[0.2em] hover:bg-stone-800 transition-all disabled:opacity-50"
+                  >
+                    {isAdjustingStock ? 'Procesando...' : 'Aplicar Movimiento'}
+                  </button>
+                </form>
               </motion.div>
             </div>
           )}

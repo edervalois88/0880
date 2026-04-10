@@ -8,7 +8,7 @@ import ProductCard from './ProductCard';
 const ShopSection = ({ products, translations, language, whatsappNumber, searchQuery = '' }) => {
   const [selectedCollection, setSelectedCollection] = useState('all');
   const [quickViewProduct, setQuickViewProduct] = useState(null);
-  const [modalImageLoaded, setModalImageLoaded] = useState(false);
+  const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
   
   const t = translations[language];
 
@@ -33,18 +33,22 @@ const ShopSection = ({ products, translations, language, whatsappNumber, searchQ
     const normalizedSearch = searchQuery.trim().toLowerCase();
 
     return products.filter((product) => {
+      // Solo mostrar productos publicados
+      if (!product.published) return false;
+
       const inCollection = selectedCollection === 'all' || product.collection === selectedCollection;
       if (!inCollection) return false;
 
       if (!normalizedSearch) return true;
+
+      const description = language === 'es' ? product.descEs : product.descEn;
 
       const haystack = [
         product.name,
         product.collection,
         product.color,
         product.design,
-        product.desc?.es,
-        product.desc?.en,
+        description,
       ]
         .filter(Boolean)
         .join(' ')
@@ -52,7 +56,7 @@ const ShopSection = ({ products, translations, language, whatsappNumber, searchQ
 
       return haystack.includes(normalizedSearch);
     });
-  }, [products, selectedCollection, searchQuery]);
+  }, [products, selectedCollection, searchQuery, language]);
 
   // Manejar compra
   const handlePurchase = (product) => {
@@ -61,6 +65,36 @@ const ShopSection = ({ products, translations, language, whatsappNumber, searchQ
       : `Hello 0880, I'm interested in the ${product.name} model, ${product.color} color with ${product.design} design from the ${product.collection} collection.`;
     
     window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`, '_blank');
+  };
+
+  const handleStripeCheckout = async (product) => {
+    setIsCheckoutLoading(true);
+    try {
+      const response = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          productId: product.id,
+          name: product.name,
+          price: product.price,
+          image: product.image,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error(data.error || 'Error al crear la sesión de pago');
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      alert('Hubo un error al procesar el pago. Por favor intenta de nuevo.');
+    } finally {
+      setIsCheckoutLoading(false);
+    }
   };
 
   return (
@@ -227,20 +261,44 @@ const ShopSection = ({ products, translations, language, whatsappNumber, searchQ
 
                 <div className="mb-12">
                    <p className="text-xs leading-loose text-brand-black/60 tracking-wider font-light">
-                     {quickViewProduct.desc[language]}
+                     {language === 'es' ? quickViewProduct.descEs : quickViewProduct.descEn}
                    </p>
                 </div>
 
-                <div className="mt-auto pt-8">
-                  <button 
-                    onClick={() => handlePurchase(quickViewProduct)}
-                    className="w-full bg-brand-black text-white px-8 py-5 text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-amber-700 transition-colors duration-300 flex items-center justify-center gap-4 group"
-                  >
-                    {language === 'es' ? 'Solicitar Asesoría' : 'Request Info'}
-                    <svg className="w-4 h-4 transform group-hover:translate-x-2 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                  </button>
-                  <p className="text-center text-[9px] text-brand-black/40 uppercase tracking-widest mt-4">
-                    {language === 'es' ? 'Atención personalizada vía WhatsApp' : 'Personalized support via WhatsApp'}
+                {quickViewProduct.stock <= 0 && (
+                  <div className="mb-8 p-4 bg-red-50 border border-red-100 rounded flex items-center justify-center">
+                    <span className="text-[10px] uppercase tracking-[0.3em] text-red-600 font-bold">
+                      {language === 'es' ? 'Producto Agotado' : 'Sold Out'}
+                    </span>
+                  </div>
+                )}
+
+                <div className="mt-auto pt-8 space-y-4">
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <button 
+                      onClick={() => handleStripeCheckout(quickViewProduct)}
+                      disabled={isCheckoutLoading || quickViewProduct.stock <= 0}
+                      className="flex-1 bg-black text-white px-8 py-5 text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-stone-800 transition-colors duration-300 flex items-center justify-center gap-4 group disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      {isCheckoutLoading ? (
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white animate-spin rounded-full"></div>
+                      ) : (
+                        <>
+                          {language === 'es' ? 'Comprar Ahora' : 'Buy Now'}
+                          <svg className="w-4 h-4 transform group-hover:translate-x-2 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                        </>
+                      )}
+                    </button>
+                    
+                    <button 
+                      onClick={() => handlePurchase(quickViewProduct)}
+                      className="flex-1 bg-transparent border border-brand-black/20 text-brand-black px-8 py-5 text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-brand-black hover:text-white transition-all duration-300 flex items-center justify-center gap-4 group"
+                    >
+                      {language === 'es' ? 'Asesoría WhatsApp' : 'WhatsApp Info'}
+                    </button>
+                  </div>
+                  <p className="text-center text-[9px] text-brand-black/40 uppercase tracking-widest">
+                    {language === 'es' ? 'Pagos seguros con Stripe' : 'Secure payments with Stripe'}
                   </p>
                 </div>
               </div>

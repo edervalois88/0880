@@ -39,6 +39,8 @@ export async function createProduct(data: any) {
         design: data.design,
         descEs: data.descEs || '',
         descEn: data.descEn || '',
+        stock: parseInt(data.stock) || 0,
+        published: data.published !== undefined ? data.published : true,
       },
     })
 
@@ -77,6 +79,8 @@ export async function updateProduct(id: number, data: any) {
         design: data.design,
         descEs: data.descEs || '',
         descEn: data.descEn || '',
+        stock: parseInt(data.stock) || 0,
+        published: data.published !== undefined ? data.published : true,
       },
     })
 
@@ -303,5 +307,143 @@ export async function migrateFromConstants() {
     return { success: true, count: migrated.length }
   } catch (error) {
     throw new Error('Error during migration')
+  }
+}
+
+// DASHBOARD & ANALYTICS
+export async function getDashboardStats() {
+  const session = await ensureAdmin()
+
+  try {
+    const now = new Date()
+    const last7Days = new Date(now.setDate(now.getDate() - 7))
+
+    // 1. Ventas Totales y Pedidos
+    const totalSales = await prisma.order.aggregate({
+      _sum: { total: true },
+      _count: { id: true },
+    })
+
+    // 2. Ticket Promedio (AOV)
+    const orderCount = totalSales._count.id || 0
+    const salesSum = totalSales._sum.total || 0
+    const aov = orderCount > 0 ? Math.round(salesSum / orderCount) : 0
+
+    // 3. Ventas por día (últimos 7 días) para la gráfica
+    const salesByDayRaw = await prisma.order.groupBy({
+      by: ['createdAt'],
+      _sum: { total: true },
+      where: {
+        createdAt: { gte: last7Days },
+      },
+    })
+
+    // Agrupar por fecha legible para Recharts
+    const salesByDay = salesByDayRaw.reduce((acc: any[], curr) => {
+      const date = curr.createdAt.toLocaleDateString('es-MX', { weekday: 'short' })
+      const existing = acc.find(a => a.name === date)
+      if (existing) {
+        existing.ventas += curr._sum.total || 0
+      } else {
+        acc.push({ name: date, ventas: curr._sum.total || 0 })
+      }
+      return acc
+    }, [])
+
+    // 4. Top 5 Productos más vendidos
+    const topProductsRaw = await prisma.order.groupBy({
+      by: ['productId'],
+      _count: { id: true },
+      _sum: { total: true },
+      orderBy: { _count: { id: 'desc' } },
+      take: 5,
+    })
+
+    const topProducts = await Promise.all(
+      topProductsRaw.map(async (tp) => {
+        const product = await prisma.product.findUnique({ where: { id: tp.productId } })
+        return {
+          name: product?.name || 'Unknown',
+          ventas: tp._count.id,
+          total: tp._sum.total,
+        }
+      })
+    )
+
+    // 5. Entregas por colección (Share of voice)
+    const statsByCollection = await prisma.product.groupBy({
+      by: ['collection'],
+      _count: { id: true },
+    })
+
+    return {
+      totalSales: salesSum,
+      orderCount,
+      aov,
+      salesByDay,
+      topProducts,
+      statsByCollection,
+      lowStockCount: await prisma.product.count({ where: { stock: { lte: 3 } } }),
+    }
+  } catch (error) {
+    console.error('Stats error:', error)
+    return { error: 'Failed to fetch stats' }
+  }
+}
+
+// GESTION DE INVENTARIO
+export async function getInventoryLogs() {
+  await ensureAdmin()
+  return await prisma.inventoryMovement.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: { product: true },
+    take: 20
+  })
+}
+
+export async function addInventoryMovement(data: { productId: number, type: 'IN' | 'OUT', quantity: number, reason: string }) {
+  const session = await ensureAdmin()
+  
+  try {
+    const product = await prisma.product.findUnique({ where: { id: data.productId } })
+    if (!product) throw new Error('Product not found')
+
+    const newStock = data.type === 'IN' 
+      ? product.stock + data.quantity 
+      : product.stock - data.quantity
+
+    // Transacción para asegurar consistencia
+    return await prisma.$transaction([
+      prisma.product.update({
+        where: { id: data.productId },
+        data: { stock: newStock }
+      }),
+      prisma.inventoryMovement.create({
+        data: {
+          productId: data.productId,
+          type: data.type,
+          quantity: data.quantity,
+          reason: data.reason,
+          userId: session.user.id as string
+        }
+      })
+    ])
+  } catch (error) {
+    throw new Error('Failed to adjust inventory')
+  }
+}
+
+export async function toggleProductVisibility(id: number, published: boolean) {
+  await ensureAdmin()
+  try {
+    const product = await prisma.product.update({
+      where: { id },
+      data: { published }
+    })
+    revalidatePath('/admin')
+    revalidatePath('/')
+    return product
+  } catch (error) {
+    throw new Error('Error toggling visibility')
   }
 }

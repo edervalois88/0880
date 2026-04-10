@@ -32,8 +32,34 @@ model Product {
   design        String
   descEs        String   @default("")
   descEn        String   @default("")
+  stock         Int      @default(0)
+  published     Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  inventoryLogs InventoryMovement[]
+  orders        Order[]
+}
+
+model Order {
+  id              String   @id @default(cuid())
+  productId       Int
+  product         Product  @relation(fields: [productId], references: [id])
+  total           Int
+  customerEmail   String
+  status          String   @default("succeeded") // succeeded, pending, failed
+  stripeSessionId String   @unique
+  createdAt       DateTime @default(now())
+}
+
+model InventoryMovement {
+  id          String   @id @default(cuid())
+  productId   Int
+  product     Product  @relation(fields: [productId], references: [id])
+  type        String   // IN (Entrada), OUT (Salida), SALE (Venta)
+  quantity    Int
+  reason      String?  // Ajuste manual, Venta, Devolución
+  userId      String?  // Quién realizó el movimiento (si es manual)
+  createdAt   DateTime @default(now())
 }
 
 model Config {
