@@ -60,7 +60,7 @@ export default function Home() {
       try {
         const [configRes, productsRes] = await Promise.all([
           fetch('/api/admin/config', { cache: 'no-store' }),
-          fetch('/api/admin/products', { cache: 'no-store' }),
+          fetch('/api/products', { cache: 'no-store' }),
         ]);
 
         if (!mounted) return;

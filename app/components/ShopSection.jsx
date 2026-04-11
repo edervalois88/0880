@@ -34,8 +34,8 @@ const ShopSection = ({ products, translations, language, whatsappNumber, searchQ
     const normalizedSearch = searchQuery.trim().toLowerCase();
 
     return products.filter((product) => {
-      // Solo mostrar productos publicados
-      if (!product.published) return false;
+      // Solo ocultar si está explícitamente marcado como NO publicado
+      if (product.published === false) return false;
 
       const inCollection = selectedCollection === 'all' || product.collection === selectedCollection;
       if (!inCollection) return false;
