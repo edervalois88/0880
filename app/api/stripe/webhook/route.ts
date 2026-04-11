@@ -28,39 +28,50 @@ export async function POST(req: NextRequest) {
       const session = event.data.object as any;
       const productId = parseInt(session.metadata?.productId || '0');
       
-      if (productId > 0) {
-        // Transacción para asegurar consistencia
-        await prisma.$transaction(async (tx) => {
-          // 1. Crear Pedido
-          await tx.order.create({
-            data: {
-              productId,
-              total: Math.round((session.amount_total || 0) / 100), // Convertir a MXN
-              customerEmail: session.customer_details?.email || 'unknown',
-              stripeSessionId: session.id,
-              status: 'succeeded'
-            }
-          });
-
-          // 2. Registrar Movimiento de Inventario
-          await tx.inventoryMovement.create({
-            data: {
-              productId,
-              type: 'SALE',
-              quantity: 1,
-              reason: `Venta Stripe: ${session.id}`,
-            }
-          });
-
-          // 3. Decrementar Stock
-          await tx.product.update({
-            where: { id: productId },
-            data: { stock: { decrement: 1 } }
-          });
-        });
-      }
+      logger.info(`EVENTO: Checkout completado para sesión ${session.id}. ID Producto: ${productId}`);
+      console.log('--- STRIPE WEBHOOK DEBUG ---');
+      console.log('Payment Status:', session.payment_status);
+      console.log('Metadata:', session.metadata);
       
-      logger.info(`Payment Succeeded and Inventory updated for session: ${session.id}`);
+      if (productId > 0) {
+        try {
+          // Transacción para asegurar consistencia
+          await prisma.$transaction(async (tx) => {
+            // 1. Crear Pedido
+            await tx.order.create({
+              data: {
+                productId,
+                total: Math.round((session.amount_total || 0) / 100), // Convertir a MXN
+                customerEmail: session.customer_details?.email || 'unknown',
+                stripeSessionId: session.id,
+                status: 'succeeded'
+              }
+            });
+
+            // 2. Registrar Movimiento de Inventario
+            await tx.inventoryMovement.create({
+              data: {
+                productId,
+                type: 'SALE',
+                quantity: 1,
+                reason: `Venta Stripe: ${session.id}`,
+              }
+            });
+
+            // 3. Decrementar Stock
+            await tx.product.update({
+              where: { id: productId },
+              data: { stock: { decrement: 1 } }
+            });
+          });
+          logger.info(`SUCCESS: Inventario y Pedido actualizados para sesión: ${session.id}`);
+        } catch (dbError: any) {
+          logger.error(`DATABASE ERROR in Webhook: ${dbError.message}`);
+          throw dbError; // Para que Stripe sepa que hubo un fallo
+        }
+      } else {
+        logger.warning(`WARNING: Se recibió un pago pero no hay productId válido en metadata.`);
+      }
       break;
     default:
       logger.info(`Unhandled event type ${event.type}`);

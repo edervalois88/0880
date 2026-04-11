@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, Image as ImageIcon, Layout, Type, Palette, Save, Eye, Plus, Trash2, Home, CheckCircle, Edit2, X, Search, LogOut, Users, Database, TrendingUp, ShoppingCart, DollarSign, Package, Box, EyeOff, Activity, Grid, List } from 'lucide-react';
+import { Settings, Image as ImageIcon, Layout, Type, Palette, Save, Eye, Plus, Trash2, Home, CheckCircle, Edit2, X, Search, LogOut, Users, Database, TrendingUp, ShoppingCart, DollarSign, Package, Box, EyeOff, Activity, Grid, List, Bell, BellOff, ArrowRight, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, AreaChart, Area } from 'recharts';
 import toast, { Toaster } from 'react-hot-toast';
 import Image from 'next/image';
@@ -65,15 +65,34 @@ export default function AdminDashboard() {
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [newUser, setNewUser] = useState({ email: '', password: '', role: 'editor' });
   const [catalogViewMode, setCatalogViewMode] = useState('grid');
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [userPage, setUserPage] = useState(1);
+  const [stockFilter, setStockFilter] = useState('all'); // all, low, out
+  const itemsPerPage = 10;
 
   const t = translations[language].admin;
   const tc = translations[language].catalog;
 
-  // Sound effect for new sales
+  // Notificaciones y Sonido
+  const addNotification = (type, message, product = null) => {
+    const newNotif = {
+      id: Date.now(),
+      type, // 'SALE', 'LOW_STOCK', 'OUT_OF_STOCK'
+      message,
+      product,
+      read: false,
+      date: new Date()
+    };
+    setNotifications(prev => [newNotif, ...prev]);
+    playNotification();
+  };
+
   const playNotification = () => {
     try {
       const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-      audio.volume = 0.5;
+      audio.volume = 0.4;
       audio.play();
     } catch (e) {
       console.error('Audio play failed', e);
@@ -125,14 +144,27 @@ export default function AdminDashboard() {
       try {
         const statsData = await getDashboardStats();
         if (statsData) {
-          // Check for new sales
+          // 1. Detectar Nuevas Ventas
           if (lastOrderCount > 0 && statsData.orderCount > lastOrderCount) {
-            playNotification();
-            toast.success(t.alerts.newSale.replace('{id}', 'Stripe'), {
-              icon: '💰',
-              duration: 5000,
-            });
+             addNotification('SALE', t.alerts.newSale.replace('{id}', 'Stripe'));
+             toast.success('¡Nueva venta real recibida!');
           }
+          
+          // 2. Detectar Stock Crítico (si no se ha notificado ya)
+          statsData.lowStockProducts.forEach(p => {
+            if (p.stock === 1) {
+              const alreadyNotified = notifications.find(n => n.product?.id === p.id && n.type === 'LOW_STOCK');
+              if (!alreadyNotified) {
+                addNotification('LOW_STOCK', `¡Atención! Queda solo 1 unidad de ${p.name}`, p);
+              }
+            } else if (p.stock === 0) {
+              const alreadyNotified = notifications.find(n => n.product?.id === p.id && n.type === 'OUT_OF_STOCK');
+              if (!alreadyNotified) {
+                addNotification('OUT_OF_STOCK', `Producto AGOTADO: ${p.name}`, p);
+              }
+            }
+          });
+
           setDashboardStats(statsData);
           setLastOrderCount(statsData.orderCount);
         }
@@ -142,7 +174,7 @@ export default function AdminDashboard() {
     }, 60000);
 
     return () => clearInterval(interval);
-  }, [status, lastOrderCount, t.alerts.newSale]);
+  }, [status, lastOrderCount, t.alerts.newSale, notifications]);
 
   // Handle language sync with root (optional, or just local)
   useEffect(() => {
@@ -334,11 +366,25 @@ export default function AdminDashboard() {
     }
   };
 
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    p.collection.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    p.color.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const getProcessedProducts = () => {
+    let list = products.filter(p => 
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      p.collection.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      p.color.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    if (stockFilter === 'low') {
+      list = list.filter(p => p.stock === 1);
+    } else if (stockFilter === 'out') {
+      list = list.filter(p => p.stock === 0);
+    }
+
+    return list;
+  };
+
+  const processedProducts = getProcessedProducts();
+  const totalPages = Math.ceil(processedProducts.length / itemsPerPage);
+  const paginatedProducts = processedProducts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   if (status === 'loading' || isLoadingData) {
     return (
@@ -397,20 +443,112 @@ export default function AdminDashboard() {
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
         {/* Topbar */}
-        <header className="bg-white border-b border-stone-200 h-16 flex items-center justify-between px-6 shrink-0 z-10">
+        <header className="bg-white border-b border-stone-200 h-16 flex items-center justify-between px-6 shrink-0 z-20">
           <h1 className="font-serif text-xl">Configuración del Sitio</h1>
-          <button 
-            onClick={handleSave}
-            disabled={isSaving}
-            className="flex items-center gap-2 bg-black text-white px-6 py-2 rounded text-xs uppercase tracking-widest font-bold hover:bg-stone-800 transition-colors disabled:opacity-50"
-          >
-            {isSaving ? (
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white animate-spin rounded-full"></div>
-            ) : (
-              <Save size={16} />
-            )}
-            {isSaving ? 'Guardando...' : 'Guardar Cambios'}
-          </button>
+          
+          <div className="flex items-center gap-4">
+            {/* Notification Bell */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowNotifications(!showNotifications)}
+                className={`p-2 rounded-full transition-colors relative ${notifications.some(n => !n.read) ? 'text-amber-600 bg-amber-50' : 'text-stone-400 hover:bg-stone-50'}`}
+              >
+                <Bell size={20} />
+                {notifications.some(n => !n.read) && (
+                  <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                )}
+              </button>
+
+              {/* Notifications Dropdown */}
+              <AnimatePresence>
+                {showNotifications && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setShowNotifications(false)}></div>
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute right-0 mt-3 w-80 bg-white border border-stone-200 shadow-xl rounded-xl z-40 overflow-hidden"
+                    >
+                      <div className="p-4 border-b border-stone-100 flex items-center justify-between bg-stone-50/50">
+                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-stone-500">Notificaciones</h3>
+                        {notifications.length > 0 && (
+                          <button 
+                            onClick={() => setNotifications([])}
+                            className="text-[9px] font-bold text-red-600 uppercase hover:underline"
+                          >
+                            Borrar todas
+                          </button>
+                        )}
+                      </div>
+                      
+                      <div className="max-h-[400px] overflow-y-auto">
+                        {notifications.length === 0 ? (
+                          <div className="p-8 text-center">
+                            <BellOff size={24} className="mx-auto text-stone-200 mb-2" />
+                            <p className="text-xs text-stone-400 italic">No hay avisos nuevos</p>
+                          </div>
+                        ) : (
+                          notifications.map(n => (
+                            <div 
+                              key={n.id} 
+                              className={`p-4 border-b border-stone-50 flex gap-3 hover:bg-stone-50 transition-colors group cursor-pointer ${!n.read ? 'bg-amber-50/30' : ''}`}
+                              onClick={() => {
+                                if (n.product) {
+                                  setActiveTab('catalog');
+                                  setStockFilter(n.type === 'OUT_OF_STOCK' ? 'out' : 'low');
+                                  setShowNotifications(false);
+                                }
+                              }}
+                            >
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                                n.type === 'SALE' ? 'bg-green-100 text-green-600' : 
+                                n.type === 'OUT_OF_STOCK' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
+                              }`}>
+                                {n.type === 'SALE' ? <DollarSign size={14} /> : <AlertTriangle size={14} />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[11px] leading-tight text-stone-700">{n.message}</p>
+                                <p className="text-[9px] text-stone-400 mt-1">{new Date(n.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                              </div>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setNotifications(prev => prev.filter(item => item.id !== n.id));
+                                }}
+                                className="opacity-0 group-hover:opacity-100 p-1 text-stone-300 hover:text-red-500"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                      
+                      {notifications.length > 0 && (
+                        <div className="p-3 bg-stone-50 text-center border-t border-stone-100 text-[10px] text-stone-500">
+                          {notifications.filter(n => !n.read).length} no leídas
+                        </div>
+                      )}
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <button 
+              onClick={handleSave}
+              disabled={isSaving}
+              className="flex items-center gap-2 bg-black text-white px-6 py-2 rounded text-xs uppercase tracking-widest font-bold hover:bg-stone-800 transition-colors disabled:opacity-50"
+            >
+              {isSaving ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white animate-spin rounded-full"></div>
+              ) : (
+                <Save size={16} />
+              )}
+              {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+            </button>
+          </div>
         </header>
 
         {/* Scrollable Content */}
@@ -504,18 +642,25 @@ export default function AdminDashboard() {
                       <p className="text-[10px] text-stone-400 mt-2">Avg. Value per cart</p>
                     </div>
 
-                    <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
+                    <div 
+                      onClick={() => {
+                        setActiveTab('catalog');
+                        setStockFilter('low');
+                        setCurrentPage(1);
+                      }}
+                      className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm cursor-pointer hover:border-red-200 hover:bg-red-50/10 transition-all group"
+                    >
                       <div className="flex justify-between items-start mb-4">
-                        <div className={`p-2 rounded-lg ${dashboardStats?.lowStockCount > 0 ? 'bg-red-50 text-red-600' : 'bg-stone-100 text-stone-600'}`}>
+                        <div className={`p-2 rounded-lg ${dashboardStats?.lowStockCount > 0 ? 'bg-red-50 text-red-600 group-hover:bg-red-600 group-hover:text-white' : 'bg-stone-100 text-stone-600'}`}>
                           <Package size={20} />
                         </div>
                         {dashboardStats?.lowStockCount > 0 && (
-                          <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-1 rounded-full uppercase tracking-tighter">Action</span>
+                          <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-1 rounded-full uppercase tracking-tighter animate-pulse">Revisar</span>
                         )}
                       </div>
                       <p className="text-xs text-stone-500 uppercase tracking-widest font-semibold">{t.stats.lowStock}</p>
                       <h3 className="text-2xl font-serif text-stone-900 mt-1">{dashboardStats?.lowStockCount || 0}</h3>
-                      <p className="text-[10px] text-stone-400 mt-2">Critically low items</p>
+                      <p className="text-[10px] text-stone-400 mt-2 flex items-center gap-1">Click para ver listado <ArrowRight size={10} /></p>
                     </div>
                   </div>
 
@@ -753,9 +898,36 @@ export default function AdminDashboard() {
                         placeholder="Buscar por nombre, color o colección..." 
                         className="flex-1 outline-none text-sm placeholder:text-stone-400"
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(e) => {
+                          setSearchQuery(e.target.value);
+                          setCurrentPage(1);
+                        }}
                       />
                     </div>
+                    
+                    {/* Stock Filter Pills */}
+                    <div className="flex bg-white p-1 rounded-lg border border-stone-200 shadow-sm gap-1 overflow-x-auto">
+                      {[
+                        { id: 'all', label: 'Todos', count: products.length },
+                        { id: 'low', label: 'Bajo Stock', count: products.filter(p => p.stock === 1).length, color: 'text-amber-600', bg: 'bg-amber-50' },
+                        { id: 'out', label: 'Agotados', count: products.filter(p => p.stock === 0).length, color: 'text-red-600', bg: 'bg-red-50' }
+                      ].map(f => (
+                        <button
+                          key={f.id}
+                          onClick={() => {
+                            setStockFilter(f.id);
+                            setCurrentPage(1);
+                          }}
+                          className={`px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-tight transition-all flex items-center gap-2 whitespace-nowrap ${
+                            stockFilter === f.id ? (f.bg || 'bg-stone-800') + ' ' + (f.color || 'text-white') : 'text-stone-400 hover:bg-stone-50'
+                          }`}
+                        >
+                          {f.label}
+                          <span className={`px-1.5 py-0.5 rounded-full text-[8px] ${stockFilter === f.id ? 'bg-white/20' : 'bg-stone-100'}`}>{f.count}</span>
+                        </button>
+                      ))}
+                    </div>
+
                     <div className="bg-white p-2 rounded-lg border border-stone-200 shadow-sm flex items-center gap-1 shrink-0">
                       <button 
                         onClick={() => setCatalogViewMode('grid')}
@@ -784,14 +956,15 @@ export default function AdminDashboard() {
                               <th className="p-4 font-semibold">Producto</th>
                               <th className="p-4 font-semibold">Colección</th>
                               <th className="p-4 font-semibold">Color / Diseño</th>
+                              <th className="p-4 font-semibold">Estado Stock</th>
                               <th className="p-4 font-semibold">Precio (MXN)</th>
                               <th className="p-4 font-semibold text-right">Acciones</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-stone-100">
-                            {filteredProducts.map((product) => (
+                            {paginatedProducts.map((product) => (
                               <tr key={product.id} className="hover:bg-stone-50/50 transition-colors group">
-                                <td className="p-4">
+                                <td className="p-4 text-xs">
                                   <div className="flex items-center gap-4">
                                     <div className="w-12 h-16 bg-stone-100 rounded overflow-hidden relative border border-stone-200 shrink-0">
                                       <Image src={product.image} alt={product.name} fill className="object-cover" />
@@ -806,16 +979,31 @@ export default function AdminDashboard() {
                                   <div className="text-sm text-stone-800">{product.color}</div>
                                   <div className="text-xs text-stone-500">{product.design}</div>
                                 </td>
+                                <td className="p-4">
+                                  <div className="flex items-center gap-2">
+                                    <div className={`w-2 h-2 rounded-full ${product.stock === 0 ? 'bg-red-500 animate-pulse' : product.stock === 1 ? 'bg-amber-500' : 'bg-green-500'}`}></div>
+                                    <span className={`text-[11px] font-bold ${product.stock === 0 ? 'text-red-600' : product.stock === 1 ? 'text-amber-700' : 'text-stone-600'}`}>
+                                      {product.stock === 0 ? 'AGOTADO' : product.stock === 1 ? '¡ÚLTIMA!' : `${product.stock} disp.`}
+                                    </span>
+                                  </div>
+                                </td>
                                 <td className="p-4 font-medium text-stone-800">
                                   ${product.price.toLocaleString()}
                                 </td>
                                 <td className="p-4 text-right">
                                   <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button 
+                                      onClick={() => {
+                                        setSelectedProductForInventory(product);
+                                        setInventoryAdjustment({ type: 'IN', quantity: 1, reason: 'Reabastecimiento rápido' });
+                                      }} 
+                                      className="text-stone-400 hover:text-green-600 p-2 transition-colors"
+                                      title="Ajustar Stock"
+                                    >
+                                      <Box size={16} />
+                                    </button>
                                     <button onClick={() => setEditingProduct(product)} className="text-stone-400 hover:text-amber-700 p-2 transition-colors">
                                       <Edit2 size={16} />
-                                    </button>
-                                    <button onClick={() => handleDeleteProduct(product.id)} className="text-stone-400 hover:text-red-600 p-2 transition-colors">
-                                      <Trash2 size={16} />
                                     </button>
                                   </div>
                                 </td>
@@ -834,20 +1022,29 @@ export default function AdminDashboard() {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                      {filteredProducts.map(product => (
+                      {paginatedProducts.map(product => (
                         <div key={product.id} className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all group">
                           <div className="relative h-64 bg-stone-100">
                             <Image src={product.image} fill className="object-cover group-hover:scale-105 transition-transform duration-700" alt={product.name} />
-                            {!product.published && (
-                              <div className="absolute top-3 right-3 bg-black/80 backdrop-blur-sm text-white text-[10px] px-2 py-1 rounded font-bold uppercase tracking-widest">Oculto</div>
-                            )}
+                            
+                            {/* Stock Badge Overlay */}
+                            <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+                              {product.stock === 0 ? (
+                                <span className="bg-red-600 text-white text-[9px] px-2 py-1 rounded font-bold uppercase tracking-widest shadow-lg">Agotado</span>
+                              ) : product.stock === 1 ? (
+                                <span className="bg-amber-500 text-white text-[9px] px-2 py-1 rounded font-bold uppercase tracking-widest shadow-lg">Última pieza</span>
+                              ) : null}
+                              {!product.published && (
+                                <span className="bg-black/80 backdrop-blur-sm text-white text-[9px] px-2 py-1 rounded font-bold uppercase tracking-widest">Oculto</span>
+                              )}
+                            </div>
                           </div>
                           <div className="p-5">
                             <div className="flex justify-between items-start mb-1">
                               <h3 className="font-bold text-stone-900 uppercase tracking-tighter text-sm">{product.name}</h3>
                               <span className="px-2 py-0.5 bg-stone-100 text-stone-600 rounded text-[9px] tracking-wider shrink-0 ml-2">{product.collection}</span>
                             </div>
-                            <p className="text-stone-500 text-xs line-clamp-2 mb-4 font-light leading-relaxed">{product.color} {product.design ? `- ${product.design}` : ''}</p>
+                            <p className="text-stone-500 text-xs mb-4 font-light leading-relaxed">Stock: {product.stock}</p>
                             <div className="flex justify-between items-center pt-4 border-t border-stone-100">
                               <span className="font-serif text-lg text-stone-800">${product.price.toLocaleString()}</span>
                               <div className="flex gap-2">
@@ -862,12 +1059,51 @@ export default function AdminDashboard() {
                           </div>
                         </div>
                       ))}
-                      {filteredProducts.length === 0 && (
-                        <div className="col-span-full bg-white border border-stone-200 rounded-xl shadow-sm p-12 text-center text-stone-500 flex flex-col items-center">
-                          <Layout size={40} className="text-stone-300 mb-4" />
-                          <p>No se encontraron productos en tu búsqueda.</p>
+                    </div>
+                  )}
+
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className="mt-8 flex items-center justify-between bg-white px-6 py-4 rounded-xl border border-stone-200 shadow-sm">
+                      <p className="text-xs text-stone-500">
+                        Mostrando <span className="font-bold">{(currentPage - 1) * itemsPerPage + 1}</span> a <span className="font-bold">{Math.min(currentPage * itemsPerPage, processedProducts.length)}</span> de <span className="font-bold">{processedProducts.length}</span> resultados
+                      </p>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                          disabled={currentPage === 1}
+                          className="p-2 border border-stone-200 rounded-lg hover:bg-stone-50 disabled:opacity-30 transition-colors"
+                        >
+                          <ChevronLeft size={18} />
+                        </button>
+                        <div className="flex items-center px-4 text-xs font-bold tracking-widest uppercase">
+                          Página {currentPage} de {totalPages}
                         </div>
-                      )}
+                        <button 
+                          onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                          disabled={currentPage === totalPages}
+                          className="p-2 border border-stone-200 rounded-lg hover:bg-stone-50 disabled:opacity-30 transition-colors"
+                        >
+                          <ChevronRight size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {processedProducts.length === 0 && (
+                    <div className="bg-white border border-stone-200 rounded-xl shadow-sm p-24 text-center text-stone-500 flex flex-col items-center">
+                      <Layout size={40} className="text-stone-300 mb-4" />
+                      <p className="font-serif text-xl text-stone-800 mb-2">No se encontraron productos</p>
+                      <p className="text-xs uppercase tracking-widest text-stone-400">Intenta ajustar los filtros de búsqueda o stock</p>
+                      <button 
+                        onClick={() => {
+                          setSearchQuery('');
+                          setStockFilter('all');
+                        }}
+                        className="mt-6 text-amber-700 text-xs font-bold uppercase tracking-widest hover:underline"
+                      >
+                        Limpiar todos los filtros
+                      </button>
                     </div>
                   )}
                 </motion.div>
@@ -907,7 +1143,7 @@ export default function AdminDashboard() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-stone-100">
-                          {users.map((user) => (
+                          {users.slice((userPage - 1) * itemsPerPage, userPage * itemsPerPage).map((user) => (
                             <tr key={user.id} className="hover:bg-stone-50/50 transition-colors">
                               <td className="p-4">
                                 <div className="flex items-center gap-3">
@@ -951,12 +1187,40 @@ export default function AdminDashboard() {
                         </tbody>
                       </table>
                     </div>
-                  </div>
-                </motion.div>
+                    </div>
+
+                    {/* User Pagination */}
+                    {Math.ceil(users.length / itemsPerPage) > 1 && (
+                      <div className="mt-4 flex items-center justify-between bg-white px-6 py-4 rounded-xl border border-stone-200 shadow-sm">
+                        <p className="text-xs text-stone-500">
+                           Total de {users.length} usuarios
+                        </p>
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => setUserPage(prev => Math.max(1, prev - 1))}
+                            disabled={userPage === 1}
+                            className="p-2 border border-stone-200 rounded-lg hover:bg-stone-50 disabled:opacity-30 transition-colors"
+                          >
+                            <ChevronLeft size={18} />
+                          </button>
+                          <div className="flex items-center px-4 text-xs font-bold tracking-widest uppercase">
+                            Página {userPage} de {Math.ceil(users.length / itemsPerPage)}
+                          </div>
+                          <button 
+                            onClick={() => setUserPage(prev => Math.min(Math.ceil(users.length / itemsPerPage), prev + 1))}
+                            disabled={userPage === Math.ceil(users.length / itemsPerPage)}
+                            className="p-2 border border-stone-200 rounded-lg hover:bg-stone-50 disabled:opacity-30 transition-colors"
+                          >
+                            <ChevronRight size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
               )}
 
 
-              {/* INVENTORY TAB */}
+              {/* INVENTORY / HISTORY TAB */}
               {activeTab === 'inventory' && (
                 <motion.div
                   key="inventory"
@@ -967,91 +1231,67 @@ export default function AdminDashboard() {
                 >
                   <div className="flex justify-between items-center mb-6">
                     <div>
-                      <h2 className="text-2xl font-serif text-stone-800">Control de Inventarios</h2>
-                      <p className="text-sm text-stone-500 mt-1">Monitorea el stock en tiempo real y gestiona la visibilidad en tienda.</p>
+                      <h2 className="text-2xl font-serif text-stone-800">Historial de Movimientos</h2>
+                      <p className="text-sm text-stone-500 mt-1">Registro detallado de entradas, salidas y ventas automáticas.</p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                    {/* Inventory Table */}
-                    <div className="lg:col-span-3 bg-white border border-stone-200 rounded-lg shadow-sm overflow-hidden">
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                          <thead>
-                            <tr className="bg-stone-50 border-b border-stone-200 text-xs uppercase tracking-widest text-stone-500">
-                              <th className="p-4 font-semibold">Producto</th>
-                              <th className="p-4 font-semibold">Stock Actual</th>
-                              <th className="p-4 font-semibold">Visibilidad</th>
-                              <th className="p-4 font-semibold text-right">Ajuste</th>
+                  <div className="bg-white border border-stone-200 rounded-lg shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-stone-50 border-b border-stone-200 text-[10px] uppercase tracking-widest text-stone-500">
+                            <th className="p-4 font-semibold">Fecha</th>
+                            <th className="p-4 font-semibold">Producto</th>
+                            <th className="p-4 font-semibold">Tipo</th>
+                            <th className="p-4 font-semibold text-right">Cantidad</th>
+                            <th className="p-4 font-semibold">Motivo</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-stone-100">
+                          {inventoryLogs.map((log) => (
+                            <tr key={log.id} className="hover:bg-stone-50/50 transition-colors">
+                              <td className="p-4 text-[10px] text-stone-400 font-medium">
+                                {new Date(log.createdAt).toLocaleString('es-MX', { 
+                                  day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+                                })}
+                              </td>
+                              <td className="p-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-10 bg-stone-100 rounded overflow-hidden relative border border-stone-200 shrink-0">
+                                    <Image src={log.product.image} alt="" fill className="object-cover" />
+                                  </div>
+                                  <span className="text-xs font-bold text-stone-800 uppercase tracking-tighter">{log.product.name}</span>
+                                </div>
+                              </td>
+                              <td className="p-4">
+                                <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${
+                                  log.type === 'IN' ? 'bg-green-50 text-green-700' : 
+                                  log.type === 'SALE' ? 'bg-blue-50 text-blue-700' : 
+                                  'bg-red-50 text-red-700'
+                                }`}>
+                                  {log.type === 'IN' ? 'Entrada' : log.type === 'SALE' ? 'Venta' : 'Salida'}
+                                </span>
+                              </td>
+                              <td className={`p-4 text-right font-bold text-sm ${
+                                log.type === 'IN' ? 'text-green-600' : 'text-stone-800'
+                              }`}>
+                                {log.type === 'IN' ? `+${log.quantity}` : `-${log.quantity}`}
+                              </td>
+                              <td className="p-4 text-xs text-stone-500 font-light italic">
+                                {log.reason}
+                              </td>
                             </tr>
-                          </thead>
-                          <tbody className="divide-y divide-stone-100">
-                            {products.map((product) => (
-                              <tr key={product.id} className="hover:bg-stone-50/50 transition-colors">
-                                <td className="p-4 flex items-center gap-3">
-                                  <div className="w-8 h-10 bg-stone-100 relative shrink-0">
-                                    <Image src={product.image} fill className="object-cover" alt={product.name} />
-                                  </div>
-                                  <span className="text-sm font-semibold text-stone-800 uppercase tracking-tighter">{product.name}</span>
-                                </td>
-                                <td className="p-4">
-                                  <div className="flex items-center gap-2">
-                                    <span className={`w-2 h-2 rounded-full ${product.stock > 10 ? 'bg-green-500' : product.stock > 0 ? 'bg-amber-500' : 'bg-red-500'}`}></span>
-                                    <span className={`text-sm font-bold ${product.stock <= 3 ? 'text-red-600' : 'text-stone-800'}`}>
-                                      {product.stock} un.
-                                    </span>
-                                    {product.stock === 0 && <span className="text-[9px] uppercase font-serif italic text-red-500">Agotado</span>}
-                                  </div>
-                                </td>
-                                <td className="p-4">
-                                  <button 
-                                    onClick={() => handleToggleVisibility(product.id, product.published)}
-                                    className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-all ${
-                                      product.published 
-                                        ? 'bg-stone-900 text-white' 
-                                        : 'bg-stone-100 text-stone-400 border border-stone-200'
-                                    }`}
-                                  >
-                                    {product.published ? <Eye size={12} /> : <EyeOff size={12} />}
-                                    {product.published ? 'Visible' : 'Oculto'}
-                                  </button>
-                                </td>
-                                <td className="p-4 text-right">
-                                  <button 
-                                    onClick={() => setSelectedProductForInventory(product)}
-                                    className="p-2 hover:bg-stone-100 rounded-lg text-stone-600 transition-colors"
-                                  >
-                                    <Activity size={16} />
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    {/* Stock Logs Side */}
-                    <div className="bg-white p-6 rounded-lg border border-stone-200 shadow-sm h-fit">
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-stone-800 mb-6 flex items-center gap-2">
-                        <Activity size={14} className="text-amber-600" />
-                        Movimientos Recientes
-                      </h3>
-                      <div className="space-y-6">
-                        {inventoryLogs.map((log, idx) => (
-                          <div key={idx} className="relative pl-4 border-l border-stone-100 space-y-1">
-                            <div className={`absolute left-[-5px] top-1 w-2 h-2 rounded-full ${log.type === 'IN' ? 'bg-green-500' : log.type === 'OUT' ? 'bg-red-500' : 'bg-amber-500'}`}></div>
-                            <p className="text-[10px] uppercase font-bold text-stone-900 tracking-tighter truncate">{log.product?.name}</p>
-                            <p className="text-[10px] text-stone-500">
-                              <span className={log.type === 'IN' ? 'text-green-600' : 'text-amber-600'}>
-                                {log.type === 'IN' ? '+' : '-'}{log.quantity} un.
-                              </span>
-                              {' · '}{log.reason}
-                            </p>
-                            <p className="text-[8px] text-stone-400">{new Date(log.createdAt).toLocaleString('es-MX', { hour: '2-digit', minute: '2-digit' })}</p>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </tbody>
+                      </table>
+                      
+                      {inventoryLogs.length === 0 && (
+                        <div className="p-12 text-center text-stone-400 flex flex-col items-center">
+                          <Activity size={32} className="text-stone-200 mb-3" />
+                          <p className="text-sm">No hay registros de movimientos aún.</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </motion.div>
