@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
           throw dbError; // Para que Stripe sepa que hubo un fallo
         }
       } else {
-        logger.warning(`WARNING: Se recibió un pago pero no hay productId válido en metadata.`);
+        logger.warn(`WARNING: Se recibió un pago pero no hay productId válido en metadata.`);
       }
       break;
     default:
