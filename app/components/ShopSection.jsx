@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
+import toast from 'react-hot-toast';
 import ProductCard from './ProductCard';
 
 const ShopSection = ({ products, translations, language, whatsappNumber, searchQuery = '' }) => {
