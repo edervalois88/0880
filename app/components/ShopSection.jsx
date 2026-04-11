@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
+import { Lock, ShieldCheck, Check, CreditCard } from 'lucide-react';
 import ProductCard from './ProductCard';
 
 const ShopSection = ({ products, translations, language, whatsappNumber, searchQuery = '' }) => {
@@ -172,6 +173,8 @@ const ShopSection = ({ products, translations, language, whatsappNumber, searchQ
                 index={i}
                 language={language}
                 onQuickView={setQuickViewProduct}
+                onDirectPurchase={handleStripeCheckout}
+                isCheckoutLoading={isCheckoutLoading}
               />
             </motion.div>
           ))}
@@ -299,9 +302,22 @@ const ShopSection = ({ products, translations, language, whatsappNumber, searchQ
                       {language === 'es' ? 'Asesoría WhatsApp' : 'WhatsApp Info'}
                     </button>
                   </div>
-                  <p className="text-center text-[9px] text-brand-black/40 uppercase tracking-widest">
-                    {language === 'es' ? 'Pagos seguros con Stripe' : 'Secure payments with Stripe'}
+                  <p className="text-center text-[9px] text-brand-black/40 uppercase tracking-widest flex items-center justify-center gap-2">
+                    <Lock size={10} />
+                    {language === 'es' ? 'Pagos encriptados y seguros con Stripe' : 'Encrypted and secure payments with Stripe'}
                   </p>
+                  
+                  {/* Trust Badges */}
+                  <div className="flex justify-center items-center gap-6 pt-2 opacity-40">
+                    <div className="flex items-center gap-1.5 grayscale">
+                      <ShieldCheck size={12} />
+                      <span className="text-[8px] font-bold uppercase tracking-tighter">Verified</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 grayscale">
+                      <CreditCard size={12} />
+                      <span className="text-[8px] font-bold uppercase tracking-tighter">PCI DSS</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </motion.div>

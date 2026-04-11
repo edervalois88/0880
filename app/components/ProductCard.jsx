@@ -3,8 +3,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
+import { Lock, ShoppingBag } from 'lucide-react';
 
-const ProductCard = ({ product, index, language, onQuickView }) => {
+const ProductCard = ({ product, index, language, onQuickView, onDirectPurchase, isCheckoutLoading }) => {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
@@ -52,16 +53,28 @@ const ProductCard = ({ product, index, language, onQuickView }) => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="absolute inset-0 bg-black/10 flex items-end justify-center pb-8"
+              className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex flex-col items-center justify-center gap-3 px-6"
             >
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDirectPurchase(product);
+                }}
+                disabled={isCheckoutLoading || product.stock <= 0}
+                className="w-full bg-white text-brand-black py-4 text-[9px] font-bold uppercase tracking-[0.3em] hover:bg-brand-black hover:text-white transition-all duration-300 transform hover:-translate-y-1 shadow-2xl flex items-center justify-center gap-2 group/btn disabled:opacity-50"
+              >
+                <Lock size={12} className="group-hover/btn:scale-110 transition-transform" />
+                {language === 'es' ? 'Comprar Ahora' : 'Buy Now'}
+              </button>
+              
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
                   onQuickView(product);
                 }}
-                className="bg-white/90 backdrop-blur-sm text-brand-black px-8 py-3 text-[9px] font-bold uppercase tracking-[0.3em] hover:bg-brand-black hover:text-white transition-all duration-300 transform hover:-translate-y-1 shadow-2xl"
+                className="w-full bg-transparent border border-white/40 text-white py-4 text-[9px] font-bold uppercase tracking-[0.3em] hover:bg-white hover:text-brand-black transition-all duration-300 transform hover:-translate-y-1"
               >
-                {language === 'es' ? 'Vista Rápida' : 'Quick View'}
+                {language === 'es' ? 'Ver Detalles' : 'Quick View'}
               </button>
             </motion.div>
           )}
@@ -69,7 +82,10 @@ const ProductCard = ({ product, index, language, onQuickView }) => {
       </div>
       
       {/* Product Details - Minimalist */}
-      <div className="flex flex-col flex-grow items-center text-center px-4">
+      <div className="flex flex-col flex-grow items-center text-center px-4 relative">
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 text-[7px] uppercase tracking-widest text-brand-black/30 font-bold whitespace-nowrap">
+           <Lock size={8} /> Pago Encriptado
+        </div>
         <h3 className="font-serif text-lg text-brand-black mb-2 transition-colors duration-300 group-hover:text-amber-700">
           {product.name}
         </h3>
