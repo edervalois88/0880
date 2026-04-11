@@ -897,6 +897,74 @@ export default function AdminDashboard() {
                 </motion.div>
               )}
 
+              {/* CATALOG TAB */}
+              {activeTab === 'catalog' && (
+                <motion.div
+                  key="catalog"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="space-y-6"
+                >
+                  <div className="flex justify-between items-center mb-6">
+                    <div>
+                      <h2 className="text-2xl font-serif text-stone-800">Catálogo de Productos</h2>
+                      <p className="text-sm text-stone-500 mt-1">Administra tu colección principal y sincroniza con el código base.</p>
+                    </div>
+                    <button 
+                      onClick={handleMigrate}
+                      disabled={isMigrating}
+                      className="bg-stone-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-xs font-bold uppercase tracking-widest hover:bg-stone-800 transition-colors disabled:opacity-50"
+                    >
+                      {isMigrating ? <span className="animate-spin">⏳</span> : <Database size={14} />} 
+                      {isMigrating ? 'Migrando...' : 'Migrar desde Constants.js'}
+                    </button>
+                  </div>
+
+                  {products?.length === 0 ? (
+                    <div className="bg-white border border-stone-200 rounded-xl p-12 text-center shadow-sm">
+                      <Layout size={48} className="mx-auto text-stone-300 mb-4" />
+                      <h3 className="text-lg font-serif text-stone-800 mb-2">Tu catálogo está vacío</h3>
+                      <p className="text-sm text-stone-500 mb-6">Parece que tu base de datos en la nube no tiene productos en este momento.</p>
+                      <button 
+                        onClick={handleMigrate}
+                        className="text-amber-600 font-bold uppercase text-xs tracking-widest hover:text-amber-700"
+                      >
+                        Iniciar Migración
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {products?.map(product => (
+                        <div key={product.id} className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all group">
+                          <div className="relative h-64 bg-stone-100">
+                            <Image src={product.image} fill className="object-cover group-hover:scale-105 transition-transform duration-700" alt={product.name} />
+                            {!product.published && (
+                              <div className="absolute top-3 right-3 bg-black/80 backdrop-blur-sm text-white text-[10px] px-2 py-1 rounded font-bold uppercase tracking-widest">Oculto</div>
+                            )}
+                          </div>
+                          <div className="p-5">
+                            <h3 className="font-bold text-stone-900 uppercase tracking-tighter text-sm mb-1">{product.name}</h3>
+                            <p className="text-stone-500 text-xs line-clamp-2 mb-4 font-light leading-relaxed">{product.description}</p>
+                            <div className="flex justify-between items-center pt-4 border-t border-stone-100">
+                              <span className="font-serif text-lg text-stone-800">${product.price.toLocaleString()}</span>
+                              <div className="flex gap-2">
+                                <button className="p-2 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
+                                  <Edit2 size={16} />
+                                </button>
+                                <button onClick={() => handleDeleteProduct(product.id)} className="p-2 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
               {/* INVENTORY TAB */}
               {activeTab === 'inventory' && (
                 <motion.div
