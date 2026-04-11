@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, Image as ImageIcon, Layout, Type, Palette, Save, Eye, Plus, Trash2, Home, CheckCircle, Edit2, X, Search, LogOut, Users, Database, TrendingUp, ShoppingCart, DollarSign, Package, Box, EyeOff, Activity, Grid, List, Bell, BellOff, ArrowRight, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
+import { Settings, Image as ImageIcon, Layout, Type, Palette, Save, Eye, Plus, Trash2, Home, CheckCircle, Edit2, X, Search, LogOut, Users, Database, TrendingUp, ShoppingCart, DollarSign, Package, Box, EyeOff, Activity, Grid, List, Bell, BellOff, ArrowRight, ChevronLeft, ChevronRight, AlertTriangle, Menu } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, AreaChart, Area } from 'recharts';
 import toast, { Toaster } from 'react-hot-toast';
 import Image from 'next/image';
@@ -70,6 +70,7 @@ export default function AdminDashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const [userPage, setUserPage] = useState(1);
   const [stockFilter, setStockFilter] = useState('all'); // all, low, out
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const itemsPerPage = 10;
 
   const t = translations[language].admin;
@@ -406,20 +407,47 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-stone-100 font-sans text-stone-800 flex flex-col md:flex-row">
       <Toaster position="top-right" />
       
-      {/* Sidebar Navigation */}
-      <aside className="w-full md:w-64 bg-white border-r border-stone-200 h-screen sticky top-0 flex flex-col hidden md:flex z-10">
-        <div className="p-6 border-b border-stone-100 flex items-center gap-3">
-          <div className="w-8 h-8 bg-black text-white flex items-center justify-center font-serif text-xs font-bold">
-            0880
+      {/* Mobile Drawer Backdrop */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[40] md:hidden"
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Sidebar Navigation (Desktop & Mobile Drawer) */}
+      <motion.aside 
+        initial={false}
+        animate={{ 
+          x: isMobileMenuOpen ? 0 : (typeof window !== 'undefined' && window.innerWidth < 768 ? -256 : 0) 
+        }}
+        className={`fixed md:sticky top-0 left-0 w-64 bg-white border-r border-stone-200 h-screen flex flex-col z-[50] transition-transform md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
+      >
+        <div className="p-6 border-b border-stone-100 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-black text-white flex items-center justify-center font-serif text-xs font-bold">
+              0880
+            </div>
+            <span className="font-bold tracking-widest uppercase text-xs">Admin</span>
           </div>
-          <span className="font-bold tracking-widest uppercase text-xs">Admin</span>
+          <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden text-stone-400 p-1">
+            <X size={20} />
+          </button>
         </div>
         
-        <nav className="flex-1 py-6 px-4 space-y-2">
+        <nav className="flex-1 py-6 px-4 space-y-2 overflow-y-auto">
           {navItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => {
+                setActiveTab(item.id);
+                setIsMobileMenuOpen(false);
+              }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-md transition-all text-sm font-medium ${
                 activeTab === item.id 
                   ? 'bg-amber-50 text-amber-700' 
@@ -438,13 +466,23 @@ export default function AdminDashboard() {
             Ver Sitio
           </a>
         </div>
-      </aside>
+      </motion.aside>
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
         {/* Topbar */}
-        <header className="bg-white border-b border-stone-200 h-16 flex items-center justify-between px-6 shrink-0 z-20">
-          <h1 className="font-serif text-xl">Configuración del Sitio</h1>
+        <header className="bg-white border-b border-stone-200 h-16 flex items-center justify-between px-4 md:px-6 shrink-0 z-20">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="md:hidden p-2 text-stone-500 hover:bg-stone-100 rounded-lg transition-colors"
+            >
+              <Menu size={20} />
+            </button>
+            <h1 className="font-serif text-sm md:text-xl truncate max-w-[150px] md:max-w-none">
+              {navItems.find(i => i.id === activeTab)?.label || 'Configuración'}
+            </h1>
+          </div>
           
           <div className="flex items-center gap-4">
             {/* Notification Bell */}
@@ -539,14 +577,14 @@ export default function AdminDashboard() {
             <button 
               onClick={handleSave}
               disabled={isSaving}
-              className="flex items-center gap-2 bg-black text-white px-6 py-2 rounded text-xs uppercase tracking-widest font-bold hover:bg-stone-800 transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 bg-black text-white px-3 md:px-6 py-2 rounded text-xs uppercase tracking-widest font-bold hover:bg-stone-800 transition-colors disabled:opacity-50"
             >
               {isSaving ? (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white animate-spin rounded-full"></div>
               ) : (
                 <Save size={16} />
               )}
-              {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+              <span className="hidden sm:inline">{isSaving ? 'Guardando...' : 'Guardar Cambios'}</span>
             </button>
 
             <div className="h-4 w-px bg-stone-200 mx-2"></div>
@@ -1049,23 +1087,29 @@ export default function AdminDashboard() {
 
                   {/* Pagination Controls */}
                   {totalPages > 1 && (
-                    <div className="mt-8 flex items-center justify-between bg-white px-6 py-4 rounded-xl border border-stone-200 shadow-sm">
-                      <p className="text-xs text-stone-500">
+                    <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white px-6 py-4 rounded-xl border border-stone-200 shadow-sm">
+                      <p className="text-[10px] md:text-xs text-stone-500 text-center sm:text-left">
                         Mostrando <span className="font-bold">{(currentPage - 1) * itemsPerPage + 1}</span> a <span className="font-bold">{Math.min(currentPage * itemsPerPage, processedProducts.length)}</span> de <span className="font-bold">{processedProducts.length}</span> resultados
                       </p>
                       <div className="flex gap-2">
                         <button 
-                          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                          onClick={() => {
+                            setCurrentPage(prev => Math.max(1, prev - 1));
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
                           disabled={currentPage === 1}
                           className="p-2 border border-stone-200 rounded-lg hover:bg-stone-50 disabled:opacity-30 transition-colors"
                         >
                           <ChevronLeft size={18} />
                         </button>
-                        <div className="flex items-center px-4 text-xs font-bold tracking-widest uppercase">
-                          Página {currentPage} de {totalPages}
+                        <div className="flex items-center px-4 text-[10px] md:text-xs font-bold tracking-widest uppercase">
+                          {currentPage} / {totalPages}
                         </div>
                         <button 
-                          onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                          onClick={() => {
+                            setCurrentPage(prev => Math.min(totalPages, prev + 1));
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
                           disabled={currentPage === totalPages}
                           className="p-2 border border-stone-200 rounded-lg hover:bg-stone-50 disabled:opacity-30 transition-colors"
                         >
@@ -1176,23 +1220,29 @@ export default function AdminDashboard() {
 
                     {/* User Pagination */}
                     {Math.ceil(users.length / itemsPerPage) > 1 && (
-                      <div className="mt-4 flex items-center justify-between bg-white px-6 py-4 rounded-xl border border-stone-200 shadow-sm">
-                        <p className="text-xs text-stone-500">
+                      <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white px-6 py-4 rounded-xl border border-stone-200 shadow-sm">
+                        <p className="text-[10px] md:text-xs text-stone-500 text-center sm:text-left">
                            Total de {users.length} usuarios
                         </p>
                         <div className="flex gap-2">
                           <button 
-                            onClick={() => setUserPage(prev => Math.max(1, prev - 1))}
+                            onClick={() => {
+                              setUserPage(prev => Math.max(1, prev - 1));
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
                             disabled={userPage === 1}
                             className="p-2 border border-stone-200 rounded-lg hover:bg-stone-50 disabled:opacity-30 transition-colors"
                           >
                             <ChevronLeft size={18} />
                           </button>
-                          <div className="flex items-center px-4 text-xs font-bold tracking-widest uppercase">
-                            Página {userPage} de {Math.ceil(users.length / itemsPerPage)}
+                          <div className="flex items-center px-4 text-[10px] md:text-xs font-bold tracking-widest uppercase">
+                            {userPage} / {Math.ceil(users.length / itemsPerPage)}
                           </div>
                           <button 
-                            onClick={() => setUserPage(prev => Math.min(Math.ceil(users.length / itemsPerPage), prev + 1))}
+                            onClick={() => {
+                              setUserPage(prev => Math.min(Math.ceil(users.length / itemsPerPage), prev + 1));
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
                             disabled={userPage === Math.ceil(users.length / itemsPerPage)}
                             className="p-2 border border-stone-200 rounded-lg hover:bg-stone-50 disabled:opacity-30 transition-colors"
                           >
