@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Settings, Image as ImageIcon, Layout, Type, Palette, Save, Eye, Plus, Trash2, Home, CheckCircle, Edit2, X, Search, LogOut, Users, Database, TrendingUp, ShoppingCart, DollarSign, Package, Box, EyeOff, Activity, Grid, List, Bell, BellOff, ArrowRight, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
@@ -548,6 +548,17 @@ export default function AdminDashboard() {
               )}
               {isSaving ? 'Guardando...' : 'Guardar Cambios'}
             </button>
+
+            <div className="h-4 w-px bg-stone-200 mx-2"></div>
+
+            <button 
+              onClick={() => signOut({ callbackUrl: '/login' })}
+              className="flex items-center gap-2 text-stone-400 hover:text-red-600 px-3 py-2 rounded-lg transition-colors group"
+              title="Cerrar Sesión"
+            >
+              <LogOut size={18} className="group-hover:rotate-12 transition-transform" />
+              <span className="text-[10px] font-bold uppercase tracking-widest hidden lg:inline">Salir</span>
+            </button>
           </div>
         </header>
 
@@ -564,48 +575,6 @@ export default function AdminDashboard() {
                   exit={{ opacity: 0, y: -10 }}
                   className="space-y-6"
                 >
-                  {/* Alerts / Notification Center */}
-                  <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
-                    <div className="bg-amber-50 px-6 py-3 border-b border-amber-100 flex items-center justify-between">
-                      <h3 className="text-[10px] font-bold uppercase tracking-widest text-amber-900 flex items-center gap-2">
-                        <Activity size={14} />
-                        {t.alerts.title}
-                      </h3>
-                      <div className="flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-ping"></div>
-                        <span className="text-[9px] text-amber-700 font-medium uppercase tracking-tighter">Live Monitor</span>
-                      </div>
-                    </div>
-                    <div className="p-4 space-y-3">
-                      {dashboardStats?.lowStockProducts?.map((product, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-3 bg-red-50 border border-red-100 rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-10 relative rounded overflow-hidden">
-                              <Image src={product.image} fill className="object-cover" alt="" />
-                            </div>
-                            <p className="text-xs font-medium text-red-900">
-                              {t.alerts.lowStock.replace('{name}', product.name).replace('{stock}', product.stock)}
-                            </p>
-                          </div>
-                          <button 
-                            onClick={() => {
-                              setSelectedProductForInventory(product);
-                              setActiveTab('inventory');
-                            }}
-                            className="bg-white px-3 py-1.5 rounded text-[9px] font-bold uppercase tracking-widest text-red-700 border border-red-200 hover:bg-red-50 transition-colors"
-                          >
-                            Reabastecer
-                          </button>
-                        </div>
-                      ))}
-                      {dashboardStats?.lowStockCount === 0 && (
-                        <p className="text-center py-4 text-xs text-stone-400 font-light italic">
-                          {t.alerts.noAlerts}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
                   {/* KPI Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm hover:border-amber-200 transition-colors group">
@@ -686,42 +655,48 @@ export default function AdminDashboard() {
                       </h3>
                       
                       <div className="h-[280px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={dashboardStats?.salesByDay || []}>
-                            <defs>
-                              <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#d97706" stopOpacity={0.1}/>
-                                <stop offset="95%" stopColor="#d97706" stopOpacity={0}/>
-                              </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f1f1" />
-                            <XAxis 
-                              dataKey="name" 
-                              axisLine={false} 
-                              tickLine={false} 
-                              tick={{fontSize: 10, fill: '#A3A3A3'}} 
-                              dy={10} 
-                            />
-                            <YAxis 
-                              axisLine={false} 
-                              tickLine={false} 
-                              tick={{fontSize: 10, fill: '#A3A3A3'}} 
-                              tickFormatter={(val) => `$${val/1000}k`} 
-                            />
-                            <Tooltip 
-                              cursor={{stroke: '#d97706', strokeWidth: 1}}
-                              contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)', padding: '12px'}}
-                            />
-                            <Area 
-                              type="monotone" 
-                              dataKey="ventas" 
-                              stroke="#d97706" 
-                              strokeWidth={3}
-                              fillOpacity={1} 
-                              fill="url(#colorSales)" 
-                              animationDuration={2000}
-                            />
-                          </AreaChart>
+                        <ResponsiveContainer width="100%" height="100%" minHeight={280}>
+                          {dashboardStats?.salesByDay?.length > 0 ? (
+                            <AreaChart data={dashboardStats.salesByDay}>
+                              <defs>
+                                <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor="#d97706" stopOpacity={0.1}/>
+                                  <stop offset="95%" stopColor="#d97706" stopOpacity={0}/>
+                                </linearGradient>
+                              </defs>
+                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f1f1" />
+                              <XAxis 
+                                dataKey="name" 
+                                axisLine={false} 
+                                tickLine={false} 
+                                tick={{fontSize: 10, fill: '#A3A3A3'}} 
+                                dy={10} 
+                              />
+                              <YAxis 
+                                axisLine={false} 
+                                tickLine={false} 
+                                tick={{fontSize: 10, fill: '#A3A3A3'}} 
+                                tickFormatter={(val) => `$${val/1000}k`} 
+                              />
+                              <Tooltip 
+                                cursor={{stroke: '#d97706', strokeWidth: 1}}
+                                contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)', padding: '12px'}}
+                              />
+                              <Area 
+                                type="monotone" 
+                                dataKey="ventas" 
+                                stroke="#d97706" 
+                                strokeWidth={3}
+                                fillOpacity={1} 
+                                fill="url(#colorSales)" 
+                                animationDuration={2000}
+                              />
+                            </AreaChart>
+                          ) : (
+                            <div className="flex items-center justify-center h-full text-stone-300 text-xs italic">
+                              Cargando datos del gráfico...
+                            </div>
+                          )}
                         </ResponsiveContainer>
                       </div>
                     </div>
@@ -995,7 +970,7 @@ export default function AdminDashboard() {
                                     <button 
                                       onClick={() => {
                                         setSelectedProductForInventory(product);
-                                        setInventoryAdjustment({ type: 'IN', quantity: 1, reason: 'Reabastecimiento rápido' });
+                                        setInventoryAdjustment({ type: 'IN', quantity: 1, reason: '' });
                                       }} 
                                       className="text-stone-400 hover:text-green-600 p-2 transition-colors"
                                       title="Ajustar Stock"
@@ -1012,7 +987,7 @@ export default function AdminDashboard() {
                           </tbody>
                         </table>
 
-                        {filteredProducts.length === 0 && (
+                        {processedProducts.length === 0 && (
                           <div className="p-12 text-center text-stone-500 flex flex-col items-center">
                             <Layout size={40} className="text-stone-300 mb-4" />
                             <p>No se encontraron productos en tu búsqueda.</p>
@@ -1048,6 +1023,16 @@ export default function AdminDashboard() {
                             <div className="flex justify-between items-center pt-4 border-t border-stone-100">
                               <span className="font-serif text-lg text-stone-800">${product.price.toLocaleString()}</span>
                               <div className="flex gap-2">
+                                 <button 
+                                  onClick={() => {
+                                    setSelectedProductForInventory(product);
+                                    setInventoryAdjustment({ type: 'IN', quantity: 1, reason: '' });
+                                  }}
+                                  className="p-2 text-stone-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                  title="Ajustar Inventario"
+                                >
+                                  <Box size={16} />
+                                </button>
                                 <button onClick={() => setEditingProduct(product)} className="p-2 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
                                   <Edit2 size={16} />
                                 </button>
@@ -1687,6 +1672,91 @@ export default function AdminDashboard() {
                     className="w-full bg-black text-white py-3 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-stone-800 transition-colors mt-4"
                   >
                     Crear Usuario
+                  </button>
+                </form>
+              </motion.div>
+            </div>
+          )}
+          {/* STOCK ADJUSTMENT MODAL */}
+          {selectedProductForInventory && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-stone-200"
+              >
+                <div className="p-6 border-b border-stone-100 flex justify-between items-center bg-stone-50/50">
+                  <div>
+                    <h3 className="font-serif text-xl text-stone-800">Ajustar Inventario</h3>
+                    <p className="text-[10px] text-stone-500 uppercase tracking-widest mt-1">{selectedProductForInventory.name}</p>
+                  </div>
+                  <button onClick={() => setSelectedProductForInventory(null)} className="text-stone-400 hover:text-stone-800 bg-white p-1.5 rounded-full border border-stone-200">
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <form onSubmit={handleAdjustStock} className="p-6 space-y-6">
+                  <div className="grid grid-cols-2 gap-4 text-center">
+                    <div className="p-3 bg-stone-50 rounded-xl border border-stone-100">
+                      <p className="text-[9px] uppercase tracking-widest text-stone-400 mb-1">Stock Actual</p>
+                      <p className="text-2xl font-serif text-stone-800">{selectedProductForInventory.stock}</p>
+                    </div>
+                    <div className="p-3 bg-amber-50 rounded-xl border border-amber-100">
+                      <p className="text-[9px] uppercase tracking-widest text-amber-600 mb-1">Nuevo Stock</p>
+                      <p className="text-2xl font-serif text-amber-900">
+                        {inventoryAdjustment.type === 'IN' 
+                          ? selectedProductForInventory.stock + (parseInt(inventoryAdjustment.quantity) || 0)
+                          : selectedProductForInventory.stock - (parseInt(inventoryAdjustment.quantity) || 0)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex bg-stone-100 p-1 rounded-lg">
+                      <button 
+                        type="button"
+                        onClick={() => setInventoryAdjustment({...inventoryAdjustment, type: 'IN'})}
+                        className={`flex-1 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-md transition-all ${inventoryAdjustment.type === 'IN' ? 'bg-white text-green-600 shadow-sm' : 'text-stone-400'}`}
+                      >
+                        Entrada (+)
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setInventoryAdjustment({...inventoryAdjustment, type: 'OUT'})}
+                        className={`flex-1 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-md transition-all ${inventoryAdjustment.type === 'OUT' ? 'bg-white text-red-600 shadow-sm' : 'text-stone-400'}`}
+                      >
+                        Salida (-)
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-2">Cantidad</label>
+                      <input 
+                        type="number" min="1" required
+                        value={inventoryAdjustment.quantity}
+                        onChange={(e) => setInventoryAdjustment({...inventoryAdjustment, quantity: e.target.value})}
+                        className="w-full border border-stone-300 rounded-xl px-4 py-3 text-lg font-serif outline-none focus:border-amber-500 transition-all bg-stone-50 focus:bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-2">Motivo de Ajuste (Obligatorio)</label>
+                      <textarea 
+                        required
+                        value={inventoryAdjustment.reason}
+                        onChange={(e) => setInventoryAdjustment({...inventoryAdjustment, reason: e.target.value})}
+                        className="w-full border border-stone-300 rounded-xl px-4 py-3 text-sm outline-none focus:border-amber-500 transition-all bg-stone-50 focus:bg-white min-h-[100px]"
+                        placeholder="Ej: Reabastecimiento de colección, Ajuste por merma, Error en conteo anterior..."
+                      />
+                    </div>
+                  </div>
+
+                  <button 
+                    type="submit"
+                    disabled={isAdjustingStock || !inventoryAdjustment.reason}
+                    className="w-full bg-black text-white py-4 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-stone-800 transition-colors disabled:opacity-50 shadow-lg shadow-stone-200"
+                  >
+                    {isAdjustingStock ? 'Procesando...' : 'Confirmar Ajuste'}
                   </button>
                 </form>
               </motion.div>
