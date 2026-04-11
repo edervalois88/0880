@@ -824,6 +824,7 @@ export default function AdminDashboard() {
                   exit={{ opacity: 0, y: -10 }}
                   className="space-y-6"
                 >
+                  <div className="flex justify-between items-center mb-6">
                     <div>
                       <h2 className="text-2xl font-serif text-stone-800">Gestión de Usuarios</h2>
                       <p className="text-sm text-stone-500 mt-1">Administra accesos y roles de administradores ({users.length} usuarios).</p>
