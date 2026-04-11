@@ -3,6 +3,7 @@
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import bcrypt from 'bcryptjs'
 
 // Verificar que el usuario es admin
 async function ensureAdmin() {
@@ -261,6 +262,73 @@ export async function toggleUserActive(userId: string, active: boolean) {
     return user
   } catch (error) {
     throw new Error('Error toggling user active status')
+  }
+}
+
+export async function createUser(data: any) {
+  const session = await ensureAdmin()
+
+  try {
+    const hashedPassword = await bcrypt.hash(data.password, 10)
+    
+    const user = await prisma.user.create({
+      data: {
+        email: data.email,
+        password: hashedPassword,
+        role: data.role || 'editor',
+        active: true
+      }
+    })
+
+    // Log de auditoría
+    await prisma.auditLog.create({
+      data: {
+        userId: session.user.id as string,
+        action: 'CREATE',
+        resource: 'User',
+        resourceId: user.id,
+        changes: JSON.stringify({ email: user.email, role: user.role }),
+      },
+    })
+
+    revalidatePath('/admin')
+    return user
+  } catch (error: any) {
+    if (error.code === 'P2002') {
+      throw new Error('El correo electrónico ya está registrado')
+    }
+    throw new Error('Error al crear usuario')
+  }
+}
+
+export async function deleteUser(userId: string) {
+  const session = await ensureAdmin()
+
+  // No permitirse auto-eliminarse
+  if (userId === session.user.id) {
+    throw new Error('No puedes eliminar tu propia cuenta administrativa')
+  }
+
+  try {
+    const user = await prisma.user.delete({
+      where: { id: userId }
+    })
+
+    // Log de auditoría
+    await prisma.auditLog.create({
+      data: {
+        userId: session.user.id as string,
+        action: 'DELETE',
+        resource: 'User',
+        resourceId: userId,
+        changes: JSON.stringify(user),
+      },
+    })
+
+    revalidatePath('/admin')
+    return user
+  } catch (error) {
+    throw new Error('Error al eliminar usuario')
   }
 }
 

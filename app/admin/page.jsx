@@ -17,6 +17,8 @@ import {
   getConfig,
   updateConfig,
   getUsers,
+  createUser,
+  deleteUser,
   updateUserRole,
   toggleUserActive,
   migrateFromConstants,
@@ -60,6 +62,8 @@ export default function AdminDashboard() {
   const [inventoryAdjustment, setInventoryAdjustment] = useState({ type: 'IN', quantity: 1, reason: '' });
   const [language, setLanguage] = useState('es');
   const [lastOrderCount, setLastOrderCount] = useState(0);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [newUser, setNewUser] = useState({ email: '', password: '', role: 'editor' });
 
   const t = translations[language].admin;
   const tc = translations[language].catalog;
@@ -102,7 +106,8 @@ export default function AdminDashboard() {
         setDashboardStats(statsData || null);
         setInventoryLogs(logsData || []);
       } catch (error) {
-        toast.error('No se pudo cargar la configuración.');
+        console.error('Data load error:', error);
+        toast.error('Error al cargar datos. Verifica la conexión a la base de datos.');
       } finally {
         setIsLoadingData(false);
       }
@@ -259,6 +264,30 @@ export default function AdminDashboard() {
       toast.success('Rol actualizado.');
     } catch (error) {
       toast.error('Error al actualizar rol.');
+    }
+  };
+
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    try {
+      const created = await createUser(newUser);
+      setUsers([created, ...users]);
+      toast.success('Usuario creado con éxito');
+      setIsCreatingUser(false);
+      setNewUser({ email: '', password: '', role: 'editor' });
+    } catch (error) {
+      toast.error(error.message || 'Error al crear usuario');
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar este usuario permanentemente?')) return;
+    try {
+      await deleteUser(userId);
+      setUsers(users.filter(u => u.id !== userId));
+      toast.success('Usuario eliminado');
+    } catch (error) {
+      toast.error(error.message || 'Error al eliminar usuario');
     }
   };
 
@@ -795,11 +824,16 @@ export default function AdminDashboard() {
                   exit={{ opacity: 0, y: -10 }}
                   className="space-y-6"
                 >
-                  <div className="flex justify-between items-center mb-6">
                     <div>
                       <h2 className="text-2xl font-serif text-stone-800">Gestión de Usuarios</h2>
                       <p className="text-sm text-stone-500 mt-1">Administra accesos y roles de administradores ({users.length} usuarios).</p>
                     </div>
+                    <button 
+                      onClick={() => setIsCreatingUser(true)}
+                      className="bg-stone-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-xs font-bold uppercase tracking-widest hover:bg-stone-800 transition-colors"
+                    >
+                      <Plus size={14} /> Nuevo Usuario
+                    </button>
                   </div>
 
                   <div className="bg-white border border-stone-200 rounded-lg shadow-sm overflow-hidden">
@@ -844,6 +878,13 @@ export default function AdminDashboard() {
                                   }`}
                                 >
                                   {user.active ? 'Desactivar' : 'Activar'}
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteUser(user.id)}
+                                  className="p-2 text-stone-400 hover:text-red-600 transition-colors"
+                                  title="Eliminar usuario"
+                                >
+                                  <Trash2 size={14} />
                                 </button>
                               </td>
                             </tr>
@@ -1287,6 +1328,65 @@ export default function AdminDashboard() {
                     className="w-full bg-black text-white py-4 rounded-lg text-xs font-bold uppercase tracking-[0.2em] hover:bg-stone-800 transition-all disabled:opacity-50"
                   >
                     {isAdjustingStock ? 'Procesando...' : 'Aplicar Movimiento'}
+                  </button>
+                </form>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+ 
+        {/* NEW USER MODAL */}
+        <AnimatePresence>
+          {isCreatingUser && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                onClick={() => setIsCreatingUser(false)}
+              />
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-white w-full max-w-md rounded-xl shadow-2xl relative z-10 overflow-hidden"
+              >
+                <div className="p-6 border-b border-stone-100 flex justify-between items-center">
+                  <h3 className="font-serif text-xl">Nuevo Usuario</h3>
+                  <button onClick={() => setIsCreatingUser(false)} className="text-stone-400 hover:text-stone-800">
+                    <X size={20} />
+                  </button>
+                </div>
+                <form onSubmit={handleCreateUser} className="p-6 space-y-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-2">Email</label>
+                    <input 
+                      type="email" required
+                      value={newUser.email} onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                      className="w-full border border-stone-300 rounded px-4 py-2 text-sm outline-none focus:border-amber-500"
+                      placeholder="admin@0880mx.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-2">Contraseña</label>
+                    <input 
+                      type="password" required minLength={6}
+                      value={newUser.password} onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                      className="w-full border border-stone-300 rounded px-4 py-2 text-sm outline-none focus:border-amber-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-2">Rol</label>
+                    <select 
+                      value={newUser.role} onChange={(e) => setNewUser({...newUser, role: e.target.value})}
+                      className="w-full border border-stone-300 rounded px-4 py-2 text-sm outline-none focus:border-amber-500 bg-white"
+                    >
+                      <option value="admin">Administrador (Acceso Total)</option>
+                      <option value="editor">Editor (Sólo Catálogo)</option>
+                    </select>
+                  </div>
+                  <button 
+                    type="submit"
+                    className="w-full bg-black text-white py-3 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-stone-800 transition-colors mt-4"
+                  >
+                    Crear Usuario
                   </button>
                 </form>
               </motion.div>
