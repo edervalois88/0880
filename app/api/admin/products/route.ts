@@ -7,7 +7,7 @@ import { logger } from '@/lib/logger'
 const createProductSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   collection: z.string().min(1, 'Collection is required'),
-  price: z.number({ invalid_type_error: 'Price must be a number' }).positive('Price must be positive'),
+  price: z.number().positive('Price must be positive'),
   image: z.string().min(1, 'Image is required'),
   color: z.string().min(1, 'Color is required'),
   design: z.string().min(1, 'Design is required'),
