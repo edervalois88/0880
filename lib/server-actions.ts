@@ -4,6 +4,7 @@ import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import bcrypt from 'bcryptjs'
+import { sendStatusProcessing, sendStatusShipped, sendStatusDelivered } from '@/lib/email'
 
 async function ensureAdmin() {
   const session = await auth()
@@ -524,6 +525,11 @@ export async function updateOrderFulfillment(
 ) {
   await ensureAdmin()
   try {
+    const previous = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { product: { select: { name: true, image: true } } },
+    })
+
     const order = await prisma.order.update({
       where: { id: orderId },
       data: {
@@ -533,6 +539,26 @@ export async function updateOrderFulfillment(
         fulfillmentDate: data.shippingStatus === 'delivered' ? new Date() : undefined,
       },
     })
+
+    // Enviar email al cliente si el estado de envío cambió (non-blocking)
+    const statusChanged = previous?.shippingStatus !== data.shippingStatus
+    if (statusChanged && previous?.customerEmail && previous?.product) {
+      const emailProps = {
+        customerEmail: previous.customerEmail,
+        productName: previous.product.name,
+        productImage: previous.product.image,
+        stripeSessionId: previous.stripeSessionId,
+        trackingNumber: data.trackingNumber ?? undefined,
+      }
+      Promise.resolve().then(async () => {
+        try {
+          if (data.shippingStatus === 'processing') await sendStatusProcessing(emailProps)
+          else if (data.shippingStatus === 'shipped') await sendStatusShipped(emailProps)
+          else if (data.shippingStatus === 'delivered') await sendStatusDelivered(emailProps)
+        } catch {}
+      })
+    }
+
     revalidatePath('/admin')
     return order
   } catch (error) {
