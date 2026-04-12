@@ -1,7 +1,5 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 interface OrderConfirmationProps {
   customerEmail: string
   productName: string
@@ -19,6 +17,7 @@ export async function sendOrderConfirmation({
   total,
   stripeSessionId,
 }: OrderConfirmationProps) {
+  const resend = new Resend(process.env.RESEND_API_KEY)
   const formattedTotal = total.toLocaleString('es-MX')
   const shortId = stripeSessionId.slice(-8).toUpperCase()
 
