@@ -11,6 +11,7 @@ const envSchema = z.object({
   CLOUDINARY_CLOUD_NAME: z.string().optional(),
   CLOUDINARY_API_KEY: z.string().optional(),
   CLOUDINARY_API_SECRET: z.string().optional(),
+  RESEND_API_KEY: z.string().optional(),
 })
 
 const parsedEnv = envSchema.safeParse(process.env)
@@ -35,4 +36,5 @@ export const env = {
   CLOUDINARY_CLOUD_NAME: parsedEnv.data.CLOUDINARY_CLOUD_NAME,
   CLOUDINARY_API_KEY: parsedEnv.data.CLOUDINARY_API_KEY,
   CLOUDINARY_API_SECRET: parsedEnv.data.CLOUDINARY_API_SECRET,
+  RESEND_API_KEY: parsedEnv.data.RESEND_API_KEY,
 }

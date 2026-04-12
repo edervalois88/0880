@@ -500,6 +500,82 @@ export async function toggleProductVisibility(id: number, published: boolean) {
   }
 }
 
+// PEDIDOS
+export async function getOrders(filters?: { search?: string; status?: string }) {
+  await ensureAdmin()
+  try {
+    return await prisma.order.findMany({
+      where: {
+        ...(filters?.search ? { customerEmail: { contains: filters.search, mode: 'insensitive' } } : {}),
+        ...(filters?.status && filters.status !== 'all' ? { shippingStatus: filters.status } : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+      include: { product: { select: { name: true, image: true, collection: true } } },
+      take: 100,
+    })
+  } catch (error) {
+    throw new Error('Error fetching orders')
+  }
+}
+
+export async function updateOrderFulfillment(
+  orderId: string,
+  data: { shippingStatus?: string; trackingNumber?: string; notes?: string }
+) {
+  await ensureAdmin()
+  try {
+    const order = await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        shippingStatus: data.shippingStatus,
+        trackingNumber: data.trackingNumber ?? null,
+        notes: data.notes ?? null,
+        fulfillmentDate: data.shippingStatus === 'delivered' ? new Date() : undefined,
+      },
+    })
+    revalidatePath('/admin')
+    return order
+  } catch (error) {
+    throw new Error('Error updating order')
+  }
+}
+
+// CLIENTES
+export async function getCustomers() {
+  await ensureAdmin()
+  try {
+    const orders = await prisma.order.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: { product: { select: { name: true, image: true } } },
+    })
+
+    const map = new Map<string, any>()
+    for (const order of orders) {
+      const existing = map.get(order.customerEmail)
+      if (existing) {
+        existing.orderCount += 1
+        existing.totalSpent += order.total
+        if (order.createdAt > existing.lastPurchase) {
+          existing.lastPurchase = order.createdAt
+        }
+        existing.orders.push(order)
+      } else {
+        map.set(order.customerEmail, {
+          email: order.customerEmail,
+          orderCount: 1,
+          totalSpent: order.total,
+          lastPurchase: order.createdAt,
+          orders: [order],
+        })
+      }
+    }
+
+    return Array.from(map.values()).sort((a, b) => b.totalSpent - a.totalSpent)
+  } catch (error) {
+    throw new Error('Error fetching customers')
+  }
+}
+
 // AUDIT LOGS
 export async function getAuditLogs(filters?: {
   resource?: string

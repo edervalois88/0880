@@ -42,14 +42,18 @@ model Product {
 }
 
 model Order {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   productId       Int
-  product         Product  @relation(fields: [productId], references: [id])
+  product         Product   @relation(fields: [productId], references: [id])
   total           Int
   customerEmail   String
-  status          String   @default("succeeded") // succeeded, pending, failed
-  stripeSessionId String   @unique
-  createdAt       DateTime @default(now())
+  status          String    @default("succeeded") // succeeded, pending, failed
+  stripeSessionId String    @unique
+  shippingStatus  String    @default("pending") // pending, processing, shipped, delivered
+  trackingNumber  String?
+  notes           String?
+  fulfillmentDate DateTime?
+  createdAt       DateTime  @default(now())
 }
 
 model InventoryMovement {

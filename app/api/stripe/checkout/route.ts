@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { prisma } from '@/lib/prisma';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2026-03-25.dahlia',
@@ -14,6 +15,12 @@ export async function POST(req: NextRequest) {
 
     if (!productId || !name || !price) {
       return NextResponse.json({ error: 'Faltan datos del producto' }, { status: 400 });
+    }
+
+    // Validar stock antes de crear sesión Stripe
+    const product = await prisma.product.findUnique({ where: { id: Number(productId) } });
+    if (!product || product.stock <= 0) {
+      return NextResponse.json({ error: 'Producto agotado' }, { status: 409 });
     }
 
     // El precio viene en MXN, Stripe lo espera en centavos

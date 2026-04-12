@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Settings, Image as ImageIcon, Layout, Type, Palette, Save,
   Eye, LogOut, Users, TrendingUp, Box, Activity, Bell, BellOff,
-  DollarSign, AlertTriangle, Trash2, Menu, X,
+  DollarSign, AlertTriangle, Trash2, Menu, X, ShoppingBag, UserCheck,
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 import { translations } from '@/app/data/constants'
@@ -25,6 +25,8 @@ import SettingsTab from '@/components/admin/SettingsTab'
 import UsersTab from '@/components/admin/UsersTab'
 import InventoryTab from '@/components/admin/InventoryTab'
 import AuditTab from '@/components/admin/AuditTab'
+import OrdersTab from '@/components/admin/OrdersTab'
+import CustomersTab from '@/components/admin/CustomersTab'
 import ProductModal from '@/components/admin/modals/ProductModal'
 import InventoryModal from '@/components/admin/modals/InventoryModal'
 import UserModal from '@/components/admin/modals/UserModal'
@@ -300,6 +302,8 @@ export default function AdminDashboard() {
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: TrendingUp },
+    { id: 'orders', label: 'Pedidos', icon: ShoppingBag },
+    { id: 'customers', label: 'Clientes', icon: UserCheck },
     { id: 'catalog', label: 'Catálogo', icon: Layout },
     { id: 'inventory', label: 'Inventario', icon: Box },
     { id: 'users', label: 'Usuarios', icon: Users },
@@ -311,7 +315,7 @@ export default function AdminDashboard() {
   ]
 
   const settingsTabs = ['general', 'hero', 'theme', 'media']
-  const wideLayout = ['catalog', 'inventory', 'dashboard', 'audit', 'users']
+  const wideLayout = ['catalog', 'inventory', 'dashboard', 'audit', 'users', 'orders', 'customers']
 
   if (status === 'loading' || isLoadingData) {
     return (
@@ -515,6 +519,10 @@ export default function AdminDashboard() {
                     onDeleteUser={handleDeleteUser}
                   />
                 )}
+
+                {activeTab === 'orders' && <OrdersTab />}
+
+                {activeTab === 'customers' && <CustomersTab />}
 
                 {activeTab === 'audit' && <AuditTab />}
 

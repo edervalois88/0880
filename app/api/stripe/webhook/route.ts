@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { sendOrderConfirmation } from '@/lib/email';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2026-03-25.dahlia',
@@ -65,6 +66,24 @@ export async function POST(req: NextRequest) {
             });
           });
           logger.info(`SUCCESS: Inventario y Pedido actualizados para sesión: ${session.id}`);
+
+          // Enviar email de confirmación (no bloquea el webhook si falla)
+          try {
+            const product = await prisma.product.findUnique({ where: { id: productId } });
+            if (product && session.customer_details?.email) {
+              await sendOrderConfirmation({
+                customerEmail: session.customer_details.email,
+                productName: product.name,
+                productImage: product.image,
+                productCollection: product.collection,
+                total: Math.round((session.amount_total || 0) / 100),
+                stripeSessionId: session.id,
+              });
+              logger.info(`Email de confirmación enviado a ${session.customer_details.email}`);
+            }
+          } catch (emailError: any) {
+            logger.error(`Email error (non-blocking): ${emailError.message}`);
+          }
         } catch (dbError: any) {
           logger.error(`DATABASE ERROR in Webhook: ${dbError.message}`);
           throw dbError; // Para que Stripe sepa que hubo un fallo
