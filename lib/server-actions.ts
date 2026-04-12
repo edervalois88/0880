@@ -5,10 +5,18 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import bcrypt from 'bcryptjs'
 
-// Verificar que el usuario es admin
 async function ensureAdmin() {
   const session = await auth()
-  if (!session?.user || session.user.role !== 'admin') {
+  if (!session?.user || (session.user as any).role !== 'admin') {
+    throw new Error('Unauthorized')
+  }
+  return session
+}
+
+async function ensureEditorOrAdmin() {
+  const session = await auth()
+  const role = (session?.user as any)?.role
+  if (!session?.user || (role !== 'admin' && role !== 'editor')) {
     throw new Error('Unauthorized')
   }
   return session
@@ -16,11 +24,9 @@ async function ensureAdmin() {
 
 // PRODUCTOS
 export async function getProducts() {
+  await ensureEditorOrAdmin()
   try {
-    const products = await prisma.product.findMany({
-      orderBy: { createdAt: 'desc' },
-    })
-    return products
+    return await prisma.product.findMany({ orderBy: { createdAt: 'desc' } })
   } catch (error) {
     throw new Error('Error fetching products')
   }
@@ -45,7 +51,6 @@ export async function createProduct(data: any) {
       },
     })
 
-    // Log de auditoría
     await prisma.auditLog.create({
       data: {
         userId: session.user.id as string,
@@ -85,7 +90,6 @@ export async function updateProduct(id: number, data: any) {
       },
     })
 
-    // Log de auditoría
     await prisma.auditLog.create({
       data: {
         userId: session.user.id as string,
@@ -109,7 +113,6 @@ export async function deleteProduct(id: number) {
   try {
     const product = await prisma.product.delete({ where: { id } })
 
-    // Log de auditoría
     await prisma.auditLog.create({
       data: {
         userId: session.user.id as string,
@@ -129,17 +132,12 @@ export async function deleteProduct(id: number) {
 
 // CONFIGURACIÓN
 export async function getConfig() {
+  await ensureEditorOrAdmin()
   try {
-    let config = await prisma.config.findUnique({
-      where: { id: 'singleton' },
-    })
-
+    let config = await prisma.config.findUnique({ where: { id: 'singleton' } })
     if (!config) {
-      config = await prisma.config.create({
-        data: { id: 'singleton' },
-      })
+      config = await prisma.config.create({ data: { id: 'singleton' } })
     }
-
     return config
   } catch (error) {
     throw new Error('Error fetching config')
@@ -150,9 +148,7 @@ export async function updateConfig(data: any) {
   const session = await ensureAdmin()
 
   try {
-    const oldConfig = await prisma.config.findUnique({
-      where: { id: 'singleton' },
-    })
+    const oldConfig = await prisma.config.findUnique({ where: { id: 'singleton' } })
 
     const config = await prisma.config.update({
       where: { id: 'singleton' },
@@ -169,7 +165,6 @@ export async function updateConfig(data: any) {
       },
     })
 
-    // Log de auditoría
     await prisma.auditLog.create({
       data: {
         userId: session.user.id as string,
@@ -190,20 +185,13 @@ export async function updateConfig(data: any) {
 
 // USUARIOS
 export async function getUsers() {
-  const session = await ensureAdmin()
+  await ensureAdmin()
 
   try {
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        email: true,
-        role: true,
-        active: true,
-        createdAt: true,
-      },
+    return await prisma.user.findMany({
+      select: { id: true, email: true, role: true, active: true, createdAt: true },
       orderBy: { createdAt: 'desc' },
     })
-    return users
   } catch (error) {
     throw new Error('Error fetching users')
   }
@@ -219,7 +207,6 @@ export async function updateUserRole(userId: string, role: string) {
       select: { id: true, email: true, role: true },
     })
 
-    // Log de auditoría
     await prisma.auditLog.create({
       data: {
         userId: session.user.id as string,
@@ -247,7 +234,6 @@ export async function toggleUserActive(userId: string, active: boolean) {
       select: { id: true, email: true, active: true },
     })
 
-    // Log de auditoría
     await prisma.auditLog.create({
       data: {
         userId: session.user.id as string,
@@ -270,17 +256,16 @@ export async function createUser(data: any) {
 
   try {
     const hashedPassword = await bcrypt.hash(data.password, 10)
-    
+
     const user = await prisma.user.create({
       data: {
         email: data.email,
         password: hashedPassword,
         role: data.role || 'editor',
-        active: true
-      }
+        active: true,
+      },
     })
 
-    // Log de auditoría
     await prisma.auditLog.create({
       data: {
         userId: session.user.id as string,
@@ -304,17 +289,13 @@ export async function createUser(data: any) {
 export async function deleteUser(userId: string) {
   const session = await ensureAdmin()
 
-  // No permitirse auto-eliminarse
-  if (userId === session.user.id) {
+  if (userId === (session.user as any).id) {
     throw new Error('No puedes eliminar tu propia cuenta administrativa')
   }
 
   try {
-    const user = await prisma.user.delete({
-      where: { id: userId }
-    })
+    const user = await prisma.user.delete({ where: { id: userId } })
 
-    // Log de auditoría
     await prisma.auditLog.create({
       data: {
         userId: session.user.id as string,
@@ -332,17 +313,14 @@ export async function deleteUser(userId: string) {
   }
 }
 
-// MIGRACION: mover contenido de constants.js a BD
+// MIGRACION
 export async function migrateFromConstants() {
   const session = await ensureAdmin()
 
   try {
     const { productsData } = await import('@/app/data/constants')
-
-    // Limpiar productos existentes
     await prisma.product.deleteMany()
 
-    // Insertar productos del constants
     const migrated = await Promise.all(
       productsData.map((p: any) =>
         prisma.product.create({
@@ -360,7 +338,6 @@ export async function migrateFromConstants() {
       )
     )
 
-    // Log
     await prisma.auditLog.create({
       data: {
         userId: session.user.id as string,
@@ -380,36 +357,30 @@ export async function migrateFromConstants() {
 
 // DASHBOARD & ANALYTICS
 export async function getDashboardStats() {
-  const session = await ensureAdmin()
+  await ensureEditorOrAdmin()
 
   try {
     const now = new Date()
     const last7Days = new Date(now.setDate(now.getDate() - 7))
 
-    // 1. Ventas Totales y Pedidos
     const totalSales = await prisma.order.aggregate({
       _sum: { total: true },
       _count: { id: true },
     })
 
-    // 2. Ticket Promedio (AOV)
     const orderCount = totalSales._count.id || 0
     const salesSum = totalSales._sum.total || 0
     const aov = orderCount > 0 ? Math.round(salesSum / orderCount) : 0
 
-    // 3. Ventas por día (últimos 7 días) para la gráfica
     const salesByDayRaw = await prisma.order.groupBy({
       by: ['createdAt'],
       _sum: { total: true },
-      where: {
-        createdAt: { gte: last7Days },
-      },
+      where: { createdAt: { gte: last7Days } },
     })
 
-    // Agrupar por fecha legible para Recharts
     const salesByDay = salesByDayRaw.reduce((acc: any[], curr) => {
       const date = curr.createdAt.toLocaleDateString('es-MX', { weekday: 'short' })
-      const existing = acc.find(a => a.name === date)
+      const existing = acc.find((a) => a.name === date)
       if (existing) {
         existing.ventas += curr._sum.total || 0
       } else {
@@ -418,7 +389,6 @@ export async function getDashboardStats() {
       return acc
     }, [])
 
-    // 4. Top 5 Productos más vendidos
     const topProductsRaw = await prisma.order.groupBy({
       by: ['productId'],
       _count: { id: true },
@@ -438,23 +408,20 @@ export async function getDashboardStats() {
       })
     )
 
-    // 5. Entregas por colección (Share of voice)
     const statsByCollection = await prisma.product.groupBy({
       by: ['collection'],
       _count: { id: true },
     })
 
-    // 6. Productos con bajo stock (detalles para widget de alertas)
     const lowStockProducts = await prisma.product.findMany({
       where: { stock: { lte: 3 } },
-      select: { id: true, name: true, stock: true, image: true }
+      select: { id: true, name: true, stock: true, image: true },
     })
 
-    // 7. Actividad reciente (últimos 5 movimientos o pedidos)
     const recentActivity = await prisma.inventoryMovement.findMany({
       orderBy: { createdAt: 'desc' },
       take: 5,
-      include: { product: { select: { name: true } } }
+      include: { product: { select: { name: true } } },
     })
 
     return {
@@ -474,32 +441,37 @@ export async function getDashboardStats() {
   }
 }
 
-// GESTION DE INVENTARIO
+// INVENTARIO
 export async function getInventoryLogs() {
-  await ensureAdmin()
+  await ensureEditorOrAdmin()
   return await prisma.inventoryMovement.findMany({
     orderBy: { createdAt: 'desc' },
     include: { product: true },
-    take: 20
+    take: 20,
   })
 }
 
-export async function addInventoryMovement(data: { productId: number, type: 'IN' | 'OUT', quantity: number, reason: string }) {
+export async function addInventoryMovement(data: {
+  productId: number
+  type: 'IN' | 'OUT'
+  quantity: number
+  reason: string
+}) {
   const session = await ensureAdmin()
-  
+
   try {
     const product = await prisma.product.findUnique({ where: { id: data.productId } })
     if (!product) throw new Error('Product not found')
 
-    const newStock = data.type === 'IN' 
-      ? product.stock + data.quantity 
-      : product.stock - data.quantity
+    const newStock =
+      data.type === 'IN'
+        ? product.stock + data.quantity
+        : product.stock - data.quantity
 
-    // Transacción para asegurar consistencia
     return await prisma.$transaction([
       prisma.product.update({
         where: { id: data.productId },
-        data: { stock: newStock }
+        data: { stock: newStock },
       }),
       prisma.inventoryMovement.create({
         data: {
@@ -507,9 +479,9 @@ export async function addInventoryMovement(data: { productId: number, type: 'IN'
           type: data.type,
           quantity: data.quantity,
           reason: data.reason,
-          userId: session.user.id as string
-        }
-      })
+          userId: session.user.id as string,
+        },
+      }),
     ])
   } catch (error) {
     throw new Error('Failed to adjust inventory')
@@ -519,14 +491,32 @@ export async function addInventoryMovement(data: { productId: number, type: 'IN'
 export async function toggleProductVisibility(id: number, published: boolean) {
   await ensureAdmin()
   try {
-    const product = await prisma.product.update({
-      where: { id },
-      data: { published }
-    })
+    const product = await prisma.product.update({ where: { id }, data: { published } })
     revalidatePath('/admin')
     revalidatePath('/')
     return product
   } catch (error) {
     throw new Error('Error toggling visibility')
+  }
+}
+
+// AUDIT LOGS
+export async function getAuditLogs(filters?: {
+  resource?: string
+  action?: string
+}) {
+  await ensureAdmin()
+  try {
+    return await prisma.auditLog.findMany({
+      where: {
+        ...(filters?.resource ? { resource: filters.resource } : {}),
+        ...(filters?.action ? { action: filters.action } : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+      include: { user: { select: { email: true } } },
+    })
+  } catch (error) {
+    throw new Error('Error fetching audit logs')
   }
 }

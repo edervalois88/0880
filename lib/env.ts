@@ -3,17 +3,14 @@ import { z } from "zod"
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  DATABASE_URL: z
-    .string()
-    .min(1, "DATABASE_URL is required")
-    .refine(
-      (value) => value.startsWith("postgresql://") || value.startsWith("postgres://"),
-      "DATABASE_URL must start with postgresql:// or postgres://"
-    ),
+  DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   AUTH_SECRET: z.string().min(32).optional(),
   NEXTAUTH_SECRET: z.string().min(32).optional(),
   AUTH_URL: z.string().url().optional(),
   NEXTAUTH_URL: z.string().url().optional(),
+  CLOUDINARY_CLOUD_NAME: z.string().optional(),
+  CLOUDINARY_API_KEY: z.string().optional(),
+  CLOUDINARY_API_SECRET: z.string().optional(),
 })
 
 const parsedEnv = envSchema.safeParse(process.env)
@@ -35,4 +32,7 @@ export const env = {
   ...parsedEnv.data,
   AUTH_SECRET: authSecret,
   AUTH_URL: parsedEnv.data.AUTH_URL ?? parsedEnv.data.NEXTAUTH_URL,
+  CLOUDINARY_CLOUD_NAME: parsedEnv.data.CLOUDINARY_CLOUD_NAME,
+  CLOUDINARY_API_KEY: parsedEnv.data.CLOUDINARY_API_KEY,
+  CLOUDINARY_API_SECRET: parsedEnv.data.CLOUDINARY_API_SECRET,
 }

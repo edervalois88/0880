@@ -3,10 +3,16 @@ import { logger } from "@/lib/logger"
 import { AuditService } from "./audit.service"
 
 export class ProductService {
-  static async getAll() {
+  static async getAll(opts?: { skip?: number; take?: number }) {
     return prisma.product.findMany({
       orderBy: { createdAt: "desc" },
+      skip: opts?.skip,
+      take: opts?.take,
     })
+  }
+
+  static async count() {
+    return prisma.product.count()
   }
 
   static async getById(id: number) {
