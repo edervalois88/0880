@@ -1,32 +1,36 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
-import { useSession, signOut } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, Image as ImageIcon, Layout, Type, Palette, Save, Eye, Plus, Trash2, Home, CheckCircle, Edit2, X, Search, LogOut, Users, Database, TrendingUp, ShoppingCart, DollarSign, Package, Box, EyeOff, Activity, Grid, List, Bell, BellOff, ArrowRight, ChevronLeft, ChevronRight, AlertTriangle, Menu } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, AreaChart, Area } from 'recharts';
-import toast, { Toaster } from 'react-hot-toast';
-import Image from 'next/image';
-import { translations } from '@/app/data/constants';
+import React, { useState, useEffect } from 'react'
+import { useSession, signOut } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
-  getProducts,
-  createProduct,
-  updateProduct,
-  deleteProduct,
-  getConfig,
-  updateConfig,
-  getUsers,
-  createUser,
-  deleteUser,
-  updateUserRole,
-  toggleUserActive,
-  migrateFromConstants,
-  getDashboardStats,
-  getInventoryLogs,
-  addInventoryMovement,
+  Settings, Image as ImageIcon, Layout, Type, Palette, Save,
+  Eye, LogOut, Users, TrendingUp, Box, Activity, Bell, BellOff,
+  DollarSign, AlertTriangle, Trash2, Menu, X,
+} from 'lucide-react'
+import toast, { Toaster } from 'react-hot-toast'
+import { translations } from '@/app/data/constants'
+import {
+  getProducts, createProduct, updateProduct, deleteProduct,
+  getConfig, updateConfig, getUsers, createUser, deleteUser,
+  updateUserRole, toggleUserActive, migrateFromConstants,
+  getDashboardStats, getInventoryLogs, addInventoryMovement,
   toggleProductVisibility,
-} from '@/lib/server-actions';
+} from '@/lib/server-actions'
+
+import DashboardTab from '@/components/admin/DashboardTab'
+import CatalogTab from '@/components/admin/CatalogTab'
+import SettingsTab from '@/components/admin/SettingsTab'
+import UsersTab from '@/components/admin/UsersTab'
+import InventoryTab from '@/components/admin/InventoryTab'
+import AuditTab from '@/components/admin/AuditTab'
+import ProductModal from '@/components/admin/modals/ProductModal'
+import InventoryModal from '@/components/admin/modals/InventoryModal'
+import UserModal from '@/components/admin/modals/UserModal'
+
+const NOTIFICATION_STORAGE_KEY = 'admin_notifications_0880'
+const MAX_STORED_NOTIFICATIONS = 50
 
 const defaultConfig = {
   id: 'singleton',
@@ -39,353 +43,275 @@ const defaultConfig = {
   primaryColor: '#b45309',
   backgroundColor: '#fafafa',
   updatedBy: '',
-  createdAt: new Date(),
-  updatedAt: new Date(),
-};
+}
 
 export default function AdminDashboard() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [isSaving, setIsSaving] = useState(false);
-  const [isLoadingData, setIsLoadingData] = useState(true);
-  const [products, setProducts] = useState([]);
-  const [users, setUsers] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [editingProduct, setEditingProduct] = useState(null);
-  const [config, setConfig] = useState(defaultConfig);
-  const [isMigrating, setIsMigrating] = useState(false);
-  const [dashboardStats, setDashboardStats] = useState(null);
-  const [inventoryLogs, setInventoryLogs] = useState([]);
-  const [isAdjustingStock, setIsAdjustingStock] = useState(false);
-  const [selectedProductForInventory, setSelectedProductForInventory] = useState(null);
-  const [inventoryAdjustment, setInventoryAdjustment] = useState({ type: 'IN', quantity: 1, reason: '' });
-  const [language, setLanguage] = useState('es');
-  const [lastOrderCount, setLastOrderCount] = useState(0);
-  const [isCreatingUser, setIsCreatingUser] = useState(false);
-  const [newUser, setNewUser] = useState({ email: '', password: '', role: 'editor' });
-  const [catalogViewMode, setCatalogViewMode] = useState('grid');
-  const [notifications, setNotifications] = useState([]);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [userPage, setUserPage] = useState(1);
-  const [stockFilter, setStockFilter] = useState('all'); // all, low, out
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const itemsPerPage = 10;
+  const { data: session, status } = useSession()
+  const router = useRouter()
 
-  const t = translations[language].admin;
-  const tc = translations[language].catalog;
+  // Navigation
+  const [activeTab, setActiveTab] = useState('dashboard')
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
-  // Notificaciones y Sonido
+  // Data
+  const [products, setProducts] = useState([])
+  const [users, setUsers] = useState([])
+  const [config, setConfig] = useState(defaultConfig)
+  const [dashboardStats, setDashboardStats] = useState(null)
+  const [inventoryLogs, setInventoryLogs] = useState([])
+  const [isLoadingData, setIsLoadingData] = useState(true)
+
+  // UI state
+  const [isSaving, setIsSaving] = useState(false)
+  const [isMigrating, setIsMigrating] = useState(false)
+  const [language, setLanguage] = useState('es')
+
+  // Catalog state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [stockFilter, setStockFilter] = useState('all')
+  const [catalogViewMode, setCatalogViewMode] = useState('grid')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [userPage, setUserPage] = useState(1)
+  const itemsPerPage = 10
+
+  // Modal state
+  const [editingProduct, setEditingProduct] = useState(null)
+  const [selectedProductForInventory, setSelectedProductForInventory] = useState(null)
+  const [inventoryAdjustment, setInventoryAdjustment] = useState({ type: 'IN', quantity: 1, reason: '' })
+  const [isAdjustingStock, setIsAdjustingStock] = useState(false)
+  const [isCreatingUser, setIsCreatingUser] = useState(false)
+  const [newUser, setNewUser] = useState({ email: '', password: '', role: 'editor' })
+
+  // Notifications
+  const [notifications, setNotifications] = useState([])
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [lastOrderCount, setLastOrderCount] = useState(0)
+
+  const t = translations[language].admin
+
+  // --- Notification helpers ---
   const addNotification = (type, message, product = null) => {
-    const newNotif = {
-      id: Date.now(),
-      type, // 'SALE', 'LOW_STOCK', 'OUT_OF_STOCK'
-      message,
-      product,
-      read: false,
-      date: new Date()
-    };
-    setNotifications(prev => [newNotif, ...prev]);
-    playNotification();
-  };
-
-  const playNotification = () => {
+    const notif = { id: Date.now(), type, message, product, read: false, date: new Date() }
+    setNotifications(prev => {
+      const updated = [notif, ...prev].slice(0, MAX_STORED_NOTIFICATIONS)
+      try { localStorage.setItem(NOTIFICATION_STORAGE_KEY, JSON.stringify(updated)) } catch {}
+      return updated
+    })
     try {
-      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-      audio.volume = 0.4;
-      audio.play();
-    } catch (e) {
-      console.error('Audio play failed', e);
-    }
-  };
+      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3')
+      audio.volume = 0.4
+      audio.play()
+    } catch {}
+  }
 
-  // Check authentication
+  // --- Auth guard ---
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/login');
-    }
-  }, [status, router]);
+    if (status === 'unauthenticated') router.push('/login')
+  }, [status, router])
 
-  // Load initial data
+  // --- Restore notifications from localStorage ---
   useEffect(() => {
-    if (status !== 'authenticated') return;
+    try {
+      const stored = localStorage.getItem(NOTIFICATION_STORAGE_KEY)
+      if (stored) setNotifications(JSON.parse(stored))
+    } catch {}
+    const savedLang = localStorage.getItem('language')
+    if (savedLang) setLanguage(savedLang)
+  }, [])
 
-    const loadAdminData = async () => {
+  // --- Load initial data ---
+  useEffect(() => {
+    if (status !== 'authenticated') return
+    const load = async () => {
       try {
         const [productsData, configData, usersData, statsData, logsData] = await Promise.all([
-          getProducts(),
-          getConfig(),
-          getUsers(),
-          getDashboardStats(),
-          getInventoryLogs(),
-        ]);
-
-        setProducts(productsData || []);
-        setConfig(configData || defaultConfig);
-        setUsers(usersData || []);
-        setDashboardStats(statsData || null);
-        setInventoryLogs(logsData || []);
-      } catch (error) {
-        console.error('Data load error:', error);
-        toast.error('Error al cargar datos. Verifica la conexión a la base de datos.');
+          getProducts(), getConfig(), getUsers(), getDashboardStats(), getInventoryLogs(),
+        ])
+        setProducts(productsData || [])
+        setConfig(configData || defaultConfig)
+        setUsers(usersData || [])
+        setDashboardStats(statsData || null)
+        setInventoryLogs(logsData || [])
+        if (statsData?.orderCount) setLastOrderCount(statsData.orderCount)
+      } catch {
+        toast.error('Error al cargar datos. Verifica la conexión a la base de datos.')
       } finally {
-        setIsLoadingData(false);
+        setIsLoadingData(false)
       }
-    };
+    }
+    load()
+  }, [status])
 
-    loadAdminData();
-  }, [status]);
-
-  // Auto-refresh logic (every 60 seconds)
+  // --- Auto-refresh every 60s ---
   useEffect(() => {
-    if (status !== 'authenticated') return;
-
+    if (status !== 'authenticated') return
     const interval = setInterval(async () => {
       try {
-        const statsData = await getDashboardStats();
-        if (statsData) {
-          // 1. Detectar Nuevas Ventas
-          if (lastOrderCount > 0 && statsData.orderCount > lastOrderCount) {
-             addNotification('SALE', t.alerts.newSale.replace('{id}', 'Stripe'));
-             toast.success('¡Nueva venta real recibida!');
-          }
-          
-          // 2. Detectar Stock Crítico (si no se ha notificado ya)
-          statsData.lowStockProducts.forEach(p => {
-            if (p.stock === 1) {
-              const alreadyNotified = notifications.find(n => n.product?.id === p.id && n.type === 'LOW_STOCK');
-              if (!alreadyNotified) {
-                addNotification('LOW_STOCK', `¡Atención! Queda solo 1 unidad de ${p.name}`, p);
-              }
-            } else if (p.stock === 0) {
-              const alreadyNotified = notifications.find(n => n.product?.id === p.id && n.type === 'OUT_OF_STOCK');
-              if (!alreadyNotified) {
-                addNotification('OUT_OF_STOCK', `Producto AGOTADO: ${p.name}`, p);
-              }
-            }
-          });
-
-          setDashboardStats(statsData);
-          setLastOrderCount(statsData.orderCount);
+        const statsData = await getDashboardStats()
+        if (!statsData) return
+        if (lastOrderCount > 0 && statsData.orderCount > lastOrderCount) {
+          addNotification('SALE', t.alerts.newSale.replace('{id}', 'Stripe'))
+          toast.success('¡Nueva venta recibida!')
         }
-      } catch (error) {
-        console.error('Auto-refresh failed', error);
-      }
-    }, 60000);
+        statsData.lowStockProducts?.forEach(p => {
+          if (p.stock === 1 && !notifications.find(n => n.product?.id === p.id && n.type === 'LOW_STOCK')) {
+            addNotification('LOW_STOCK', `¡Atención! Queda solo 1 unidad de ${p.name}`, p)
+          } else if (p.stock === 0 && !notifications.find(n => n.product?.id === p.id && n.type === 'OUT_OF_STOCK')) {
+            addNotification('OUT_OF_STOCK', `Producto AGOTADO: ${p.name}`, p)
+          }
+        })
+        setDashboardStats(statsData)
+        setLastOrderCount(statsData.orderCount)
+      } catch {}
+    }, 60000)
+    return () => clearInterval(interval)
+  }, [status, lastOrderCount, notifications, t.alerts.newSale])
 
-    return () => clearInterval(interval);
-  }, [status, lastOrderCount, t.alerts.newSale, notifications]);
-
-  // Handle language sync with root (optional, or just local)
-  useEffect(() => {
-    const savedLang = localStorage.getItem('language');
-    if (savedLang) setLanguage(savedLang);
-  }, []);
-
-  const handleSave = async () => {
-    if (!session?.user) return;
-    setIsSaving(true);
-
+  // --- Handlers ---
+  const handleSaveConfig = async () => {
+    setIsSaving(true)
     try {
       await updateConfig({
-        siteName: config.siteName,
-        whatsappNumber: config.whatsappNumber,
-        currency: config.currency,
-        heroTitle1: config.heroTitle1,
-        heroTitle2: config.heroTitle2,
-        heroSubtitle: config.heroSubtitle,
-        primaryColor: config.primaryColor,
-        backgroundColor: config.backgroundColor,
-      });
-
-      toast.success('Cambios guardados exitosamente.');
-    } catch (error) {
-      toast.error('No se pudieron guardar los cambios.');
+        siteName: config.siteName, whatsappNumber: config.whatsappNumber, currency: config.currency,
+        heroTitle1: config.heroTitle1, heroTitle2: config.heroTitle2, heroSubtitle: config.heroSubtitle,
+        primaryColor: config.primaryColor, backgroundColor: config.backgroundColor,
+      })
+      toast.success('Cambios guardados exitosamente.')
+    } catch {
+      toast.error('No se pudieron guardar los cambios.')
     } finally {
-      setIsSaving(false);
+      setIsSaving(false)
     }
-  };
+  }
 
-  const handleSaveProduct = async (e) => {
-    e.preventDefault();
-    if (!session?.user) return;
-
-    const productData = {
-      name: editingProduct.name,
-      collection: editingProduct.collection,
-      price: editingProduct.price,
-      color: editingProduct.color,
-      design: editingProduct.design,
-      image: editingProduct.image,
-      descEs: editingProduct.descEs || '',
-      descEn: editingProduct.descEn || editingProduct.descEs || '',
-      stock: parseInt(editingProduct.stock) || 0,
-      published: !!editingProduct.published,
-    };
-
+  const handleSaveProduct = async (productData) => {
     try {
-      if (editingProduct.id === 'new') {
-        const newProduct = await createProduct(productData);
-        setProducts([newProduct, ...products]);
-        toast.success('Producto agregado con éxito.');
+      if (productData.id === 'new') {
+        const created = await createProduct(productData)
+        setProducts(prev => [created, ...prev])
+        toast.success('Producto agregado.')
       } else {
-        const updated = await updateProduct(editingProduct.id, productData);
-        setProducts(products.map((p) => (p.id === editingProduct.id ? updated : p)));
-        toast.success('Producto actualizado.');
+        const updated = await updateProduct(productData.id, productData)
+        setProducts(prev => prev.map(p => p.id === productData.id ? updated : p))
+        toast.success('Producto actualizado.')
       }
-      setEditingProduct(null);
-    } catch (error) {
-      toast.error('Error al guardar el producto.');
+      setEditingProduct(null)
+    } catch {
+      toast.error('Error al guardar el producto.')
     }
-  };
+  }
 
   const handleDeleteProduct = async (id) => {
-    if (!confirm('¿Estás seguro de que deseas eliminar este producto?')) return;
-
+    if (!confirm('¿Estás seguro de que deseas eliminar este producto?')) return
     try {
-      await deleteProduct(id);
-      setProducts(products.filter((p) => p.id !== id));
-      toast.success('Producto eliminado.');
-    } catch (error) {
-      toast.error('Error al eliminar el producto.');
+      await deleteProduct(id)
+      setProducts(prev => prev.filter(p => p.id !== id))
+      toast.success('Producto eliminado.')
+    } catch {
+      toast.error('Error al eliminar el producto.')
     }
-  };
+  }
+
+  const handleAdjustStock = async (e) => {
+    e.preventDefault()
+    if (!selectedProductForInventory) return
+    setIsAdjustingStock(true)
+    try {
+      await addInventoryMovement({
+        productId: selectedProductForInventory.id,
+        type: inventoryAdjustment.type,
+        quantity: parseInt(inventoryAdjustment.quantity),
+        reason: inventoryAdjustment.reason || (inventoryAdjustment.type === 'IN' ? 'Entrada manual' : 'Salida manual'),
+      })
+      const diff = inventoryAdjustment.type === 'IN' ? parseInt(inventoryAdjustment.quantity) : -parseInt(inventoryAdjustment.quantity)
+      setProducts(prev => prev.map(p => p.id === selectedProductForInventory.id ? { ...p, stock: p.stock + diff } : p))
+      const newLogs = await getInventoryLogs()
+      setInventoryLogs(newLogs)
+      toast.success('Inventario actualizado.')
+      setSelectedProductForInventory(null)
+      setInventoryAdjustment({ type: 'IN', quantity: 1, reason: '' })
+    } catch {
+      toast.error('Error al ajustar inventario.')
+    } finally {
+      setIsAdjustingStock(false)
+    }
+  }
+
+  const handleCreateUser = async (e) => {
+    e.preventDefault()
+    try {
+      const created = await createUser(newUser)
+      setUsers(prev => [created, ...prev])
+      toast.success('Usuario creado.')
+      setIsCreatingUser(false)
+      setNewUser({ email: '', password: '', role: 'editor' })
+    } catch (error) {
+      toast.error(error.message || 'Error al crear usuario.')
+    }
+  }
+
+  const handleDeleteUser = async (userId) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar este usuario permanentemente?')) return
+    try {
+      await deleteUser(userId)
+      setUsers(prev => prev.filter(u => u.id !== userId))
+      toast.success('Usuario eliminado.')
+    } catch (error) {
+      toast.error(error.message || 'Error al eliminar usuario.')
+    }
+  }
+
+  const handleUpdateRole = async (userId, role) => {
+    try {
+      await updateUserRole(userId, role)
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, role } : u))
+      toast.success('Rol actualizado.')
+    } catch {
+      toast.error('Error al actualizar rol.')
+    }
+  }
+
+  const handleToggleUserStatus = async (userId, currentActive) => {
+    try {
+      await toggleUserActive(userId, !currentActive)
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, active: !currentActive } : u))
+      toast.success('Estado actualizado.')
+    } catch {
+      toast.error('Error al actualizar usuario.')
+    }
+  }
+
+  const handleMigrate = async () => {
+    if (!confirm('¿Migrar productos desde constants.js? Esto reemplazará el catálogo actual.')) return
+    setIsMigrating(true)
+    try {
+      const result = await migrateFromConstants()
+      if (result.success) {
+        toast.success(`${result.count} productos importados.`)
+        const updated = await getProducts()
+        setProducts(updated)
+      }
+    } catch {
+      toast.error('Error durante la migración.')
+    } finally {
+      setIsMigrating(false)
+    }
+  }
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: TrendingUp },
     { id: 'catalog', label: 'Catálogo', icon: Layout },
     { id: 'inventory', label: 'Inventario', icon: Box },
     { id: 'users', label: 'Usuarios', icon: Users },
+    { id: 'audit', label: 'Auditoría', icon: Activity },
     { id: 'general', label: 'General', icon: Settings },
     { id: 'hero', label: 'Hero & Textos', icon: Type },
     { id: 'theme', label: 'Apariencia', icon: Palette },
     { id: 'media', label: 'Multimedia', icon: ImageIcon },
-  ];
- 
-  const handleMigrate = async () => {
-    if (!confirm('¿Deseas migrar los productos desde el archivo constants.js? Esto reemplazará el catálogo actual.')) return;
-    
-    setIsMigrating(true);
-    try {
-      const result = await migrateFromConstants();
-      if (result.success) {
-        toast.success(`Migración exitosa: ${result.count} productos importados.`);
-        const updatedProducts = await getProducts();
-        setProducts(updatedProducts);
-      }
-    } catch (error) {
-      toast.error('Error durante la migración.');
-    } finally {
-      setIsMigrating(false);
-    }
-  };
+  ]
 
-  const handleToggleUserStatus = async (userId, currentStatus) => {
-    try {
-      await toggleUserActive(userId, !currentStatus);
-      setUsers(users.map(u => u.id === userId ? { ...u, active: !currentStatus } : u));
-      toast.success('Estado de usuario actualizado.');
-    } catch (error) {
-      toast.error('Error al actualizar usuario.');
-    }
-  };
-
-  const handleUpdateRole = async (userId, newRole) => {
-    try {
-      await updateUserRole(userId, newRole);
-      setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
-      toast.success('Rol actualizado.');
-    } catch (error) {
-      toast.error('Error al actualizar rol.');
-    }
-  };
-
-  const handleCreateUser = async (e) => {
-    e.preventDefault();
-    try {
-      const created = await createUser(newUser);
-      setUsers([created, ...users]);
-      toast.success('Usuario creado con éxito');
-      setIsCreatingUser(false);
-      setNewUser({ email: '', password: '', role: 'editor' });
-    } catch (error) {
-      toast.error(error.message || 'Error al crear usuario');
-    }
-  };
-
-  const handleDeleteUser = async (userId) => {
-    if (!confirm('¿Estás seguro de que deseas eliminar este usuario permanentemente?')) return;
-    try {
-      await deleteUser(userId);
-      setUsers(users.filter(u => u.id !== userId));
-      toast.success('Usuario eliminado');
-    } catch (error) {
-      toast.error(error.message || 'Error al eliminar usuario');
-    }
-  };
-
-  const handleToggleVisibility = async (id, currentStatus) => {
-    try {
-      await toggleProductVisibility(id, !currentStatus);
-      setProducts(products.map(p => p.id === id ? { ...p, published: !currentStatus } : p));
-      toast.success('Visibilidad actualizada');
-    } catch (error) {
-      toast.error('Error al cambiar visibilidad');
-    }
-  };
-
-  const handleAdjustStock = async (e) => {
-    e.preventDefault();
-    if (!selectedProductForInventory) return;
-    
-    setIsAdjustingStock(true);
-    try {
-      await addInventoryMovement({
-        productId: selectedProductForInventory.id,
-        type: inventoryAdjustment.type,
-        quantity: parseInt(inventoryAdjustment.quantity),
-        reason: inventoryAdjustment.reason || (inventoryAdjustment.type === 'IN' ? 'Entrada manual' : 'Salida manual')
-      });
-      
-      // Update local state
-      const diff = inventoryAdjustment.type === 'IN' ? parseInt(inventoryAdjustment.quantity) : -parseInt(inventoryAdjustment.quantity);
-      setProducts(products.map(p => p.id === selectedProductForInventory.id ? { ...p, stock: p.stock + diff } : p));
-      
-      // Refresh logs
-      const newLogs = await getInventoryLogs();
-      setInventoryLogs(newLogs);
-      
-      toast.success('Inventario actualizado');
-      setSelectedProductForInventory(null);
-      setInventoryAdjustment({ type: 'IN', quantity: 1, reason: '' });
-    } catch (error) {
-      console.error(error);
-      toast.error('Error al ajustar inventario');
-    } finally {
-      setIsAdjustingStock(false);
-    }
-  };
-
-  const getProcessedProducts = () => {
-    let list = products.filter(p => 
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      p.collection.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      p.color.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    if (stockFilter === 'low') {
-      list = list.filter(p => p.stock === 1);
-    } else if (stockFilter === 'out') {
-      list = list.filter(p => p.stock === 0);
-    }
-
-    return list;
-  };
-
-  const processedProducts = getProcessedProducts();
-  const totalPages = Math.ceil(processedProducts.length / itemsPerPage);
-  const paginatedProducts = processedProducts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const settingsTabs = ['general', 'hero', 'theme', 'media']
+  const wideLayout = ['catalog', 'inventory', 'dashboard', 'audit', 'users']
 
   if (status === 'loading' || isLoadingData) {
     return (
@@ -396,98 +322,70 @@ export default function AdminDashboard() {
           <p className="text-xs uppercase tracking-widest text-stone-500">Cargando...</p>
         </div>
       </div>
-    );
+    )
   }
 
-  if (status === 'unauthenticated') {
-    return null; // Will redirect in useEffect
-  }
+  if (status === 'unauthenticated') return null
 
   return (
     <div className="min-h-screen bg-stone-100 font-sans text-stone-800 flex flex-col md:flex-row">
       <Toaster position="top-right" />
-      
-      {/* Mobile Drawer Backdrop */}
+
+      {/* Mobile backdrop */}
       <AnimatePresence>
         {isMobileMenuOpen && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={() => setIsMobileMenuOpen(false)}
             className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[40] md:hidden"
           />
         )}
       </AnimatePresence>
 
-      {/* Sidebar Navigation (Desktop & Mobile Drawer) */}
-      <motion.aside 
-        initial={false}
-        animate={{ 
-          x: isMobileMenuOpen ? 0 : (typeof window !== 'undefined' && window.innerWidth < 768 ? -256 : 0) 
-        }}
-        className={`fixed md:sticky top-0 left-0 w-64 bg-white border-r border-stone-200 h-screen flex flex-col z-[50] transition-transform md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
-      >
+      {/* Sidebar */}
+      <aside className={`fixed md:sticky top-0 left-0 w-64 bg-white border-r border-stone-200 h-screen flex flex-col z-[50] transition-transform md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
         <div className="p-6 border-b border-stone-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-black text-white flex items-center justify-center font-serif text-xs font-bold">
-              0880
-            </div>
+            <div className="w-8 h-8 bg-black text-white flex items-center justify-center font-serif text-xs font-bold">0880</div>
             <span className="font-bold tracking-widest uppercase text-xs">Admin</span>
           </div>
-          <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden text-stone-400 p-1">
-            <X size={20} />
-          </button>
+          <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden text-stone-400 p-1"><X size={20} /></button>
         </div>
-        
-        <nav className="flex-1 py-6 px-4 space-y-2 overflow-y-auto">
-          {navItems.map((item) => (
+        <nav className="flex-1 py-6 px-4 space-y-1 overflow-y-auto">
+          {navItems.map(item => (
             <button
               key={item.id}
-              onClick={() => {
-                setActiveTab(item.id);
-                setIsMobileMenuOpen(false);
-              }}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-md transition-all text-sm font-medium ${
-                activeTab === item.id 
-                  ? 'bg-amber-50 text-amber-700' 
-                  : 'text-stone-500 hover:bg-stone-50 hover:text-stone-900'
-              }`}
+              onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false) }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-md transition-all text-sm font-medium ${activeTab === item.id ? 'bg-amber-50 text-amber-700' : 'text-stone-500 hover:bg-stone-50 hover:text-stone-900'}`}
             >
-              <item.icon size={18} />
-              {item.label}
+              <item.icon size={18} /> {item.label}
             </button>
           ))}
         </nav>
-        
         <div className="p-4 border-t border-stone-100">
           <a href="/" target="_blank" className="flex items-center justify-center gap-2 w-full px-4 py-2 text-xs uppercase tracking-widest border border-stone-300 rounded hover:bg-stone-50 transition-colors">
-            <Eye size={14} />
-            Ver Sitio
+            <Eye size={14} /> Ver Sitio
           </a>
         </div>
-      </motion.aside>
+      </aside>
 
-      {/* Main Content Area */}
+      {/* Main */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
         {/* Topbar */}
         <header className="bg-white border-b border-stone-200 h-16 flex items-center justify-between px-4 md:px-6 shrink-0 z-20">
           <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setIsMobileMenuOpen(true)}
-              className="md:hidden p-2 text-stone-500 hover:bg-stone-100 rounded-lg transition-colors"
-            >
+            <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden p-2 text-stone-500 hover:bg-stone-100 rounded-lg transition-colors">
               <Menu size={20} />
             </button>
             <h1 className="font-serif text-sm md:text-xl truncate max-w-[150px] md:max-w-none">
-              {navItems.find(i => i.id === activeTab)?.label || 'Configuración'}
+              {navItems.find(i => i.id === activeTab)?.label || 'Admin'}
             </h1>
           </div>
-          
+
           <div className="flex items-center gap-4">
-            {/* Notification Bell */}
+            {/* Notification bell */}
             <div className="relative">
-              <button 
+              <button
                 onClick={() => setShowNotifications(!showNotifications)}
                 className={`p-2 rounded-full transition-colors relative ${notifications.some(n => !n.read) ? 'text-amber-600 bg-amber-50' : 'text-stone-400 hover:bg-stone-50'}`}
               >
@@ -496,73 +394,53 @@ export default function AdminDashboard() {
                   <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
                 )}
               </button>
-
-              {/* Notifications Dropdown */}
               <AnimatePresence>
                 {showNotifications && (
                   <>
                     <div className="fixed inset-0 z-30" onClick={() => setShowNotifications(false)}></div>
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }}
                       className="absolute right-0 mt-3 w-80 bg-white border border-stone-200 shadow-xl rounded-xl z-40 overflow-hidden"
                     >
                       <div className="p-4 border-b border-stone-100 flex items-center justify-between bg-stone-50/50">
                         <h3 className="text-[10px] font-bold uppercase tracking-widest text-stone-500">Notificaciones</h3>
                         {notifications.length > 0 && (
-                          <button 
-                            onClick={() => setNotifications([])}
-                            className="text-[9px] font-bold text-red-600 uppercase hover:underline"
-                          >
+                          <button onClick={() => {
+                            setNotifications([])
+                            try { localStorage.removeItem(NOTIFICATION_STORAGE_KEY) } catch {}
+                          }} className="text-[9px] font-bold text-red-600 uppercase hover:underline">
                             Borrar todas
                           </button>
                         )}
                       </div>
-                      
                       <div className="max-h-[400px] overflow-y-auto">
                         {notifications.length === 0 ? (
                           <div className="p-8 text-center">
                             <BellOff size={24} className="mx-auto text-stone-200 mb-2" />
                             <p className="text-xs text-stone-400 italic">No hay avisos nuevos</p>
                           </div>
-                        ) : (
-                          notifications.map(n => (
-                            <div 
-                              key={n.id} 
-                              className={`p-4 border-b border-stone-50 flex gap-3 hover:bg-stone-50 transition-colors group cursor-pointer ${!n.read ? 'bg-amber-50/30' : ''}`}
-                              onClick={() => {
-                                if (n.product) {
-                                  setActiveTab('catalog');
-                                  setStockFilter(n.type === 'OUT_OF_STOCK' ? 'out' : 'low');
-                                  setShowNotifications(false);
-                                }
-                              }}
-                            >
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                                n.type === 'SALE' ? 'bg-green-100 text-green-600' : 
-                                n.type === 'OUT_OF_STOCK' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
-                              }`}>
-                                {n.type === 'SALE' ? <DollarSign size={14} /> : <AlertTriangle size={14} />}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-[11px] leading-tight text-stone-700">{n.message}</p>
-                                <p className="text-[9px] text-stone-400 mt-1">{new Date(n.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                              </div>
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setNotifications(prev => prev.filter(item => item.id !== n.id));
-                                }}
-                                className="opacity-0 group-hover:opacity-100 p-1 text-stone-300 hover:text-red-500"
-                              >
-                                <Trash2 size={12} />
-                              </button>
+                        ) : notifications.map(n => (
+                          <div
+                            key={n.id}
+                            className={`p-4 border-b border-stone-50 flex gap-3 hover:bg-stone-50 cursor-pointer group ${!n.read ? 'bg-amber-50/30' : ''}`}
+                            onClick={() => {
+                              if (n.product) { setActiveTab('catalog'); setStockFilter(n.type === 'OUT_OF_STOCK' ? 'out' : 'low'); setShowNotifications(false) }
+                              setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, read: true } : item))
+                            }}
+                          >
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${n.type === 'SALE' ? 'bg-green-100 text-green-600' : n.type === 'OUT_OF_STOCK' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
+                              {n.type === 'SALE' ? <DollarSign size={14} /> : <AlertTriangle size={14} />}
                             </div>
-                          ))
-                        )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[11px] leading-tight text-stone-700">{n.message}</p>
+                              <p className="text-[9px] text-stone-400 mt-1">{new Date(n.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                            </div>
+                            <button onClick={(e) => { e.stopPropagation(); setNotifications(prev => prev.filter(item => item.id !== n.id)) }} className="opacity-0 group-hover:opacity-100 p-1 text-stone-300 hover:text-red-500">
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        ))}
                       </div>
-                      
                       {notifications.length > 0 && (
                         <div className="p-3 bg-stone-50 text-center border-t border-stone-100 text-[10px] text-stone-500">
                           {notifications.filter(n => !n.read).length} no leídas
@@ -574,1247 +452,108 @@ export default function AdminDashboard() {
               </AnimatePresence>
             </div>
 
-            <button 
-              onClick={handleSave}
-              disabled={isSaving}
-              className="flex items-center gap-2 bg-black text-white px-3 md:px-6 py-2 rounded text-xs uppercase tracking-widest font-bold hover:bg-stone-800 transition-colors disabled:opacity-50"
-            >
-              {isSaving ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white animate-spin rounded-full"></div>
-              ) : (
-                <Save size={16} />
-              )}
-              <span className="hidden sm:inline">{isSaving ? 'Guardando...' : 'Guardar Cambios'}</span>
-            </button>
+            {settingsTabs.includes(activeTab) && (
+              <button
+                onClick={handleSaveConfig}
+                disabled={isSaving}
+                className="flex items-center gap-2 bg-black text-white px-3 md:px-6 py-2 rounded text-xs uppercase tracking-widest font-bold hover:bg-stone-800 transition-colors disabled:opacity-50"
+              >
+                {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white animate-spin rounded-full"></div> : <Save size={16} />}
+                <span className="hidden sm:inline">{isSaving ? 'Guardando...' : 'Guardar'}</span>
+              </button>
+            )}
 
-            <div className="h-4 w-px bg-stone-200 mx-2"></div>
-
-            <button 
-              onClick={() => signOut({ callbackUrl: '/login' })}
-              className="flex items-center gap-2 text-stone-400 hover:text-red-600 px-3 py-2 rounded-lg transition-colors group"
-              title="Cerrar Sesión"
-            >
+            <div className="h-4 w-px bg-stone-200"></div>
+            <button onClick={() => signOut({ callbackUrl: '/login' })} className="flex items-center gap-2 text-stone-400 hover:text-red-600 px-3 py-2 rounded-lg transition-colors group" title="Cerrar Sesión">
               <LogOut size={18} className="group-hover:rotate-12 transition-transform" />
               <span className="text-[10px] font-bold uppercase tracking-widest hidden lg:inline">Salir</span>
             </button>
           </div>
         </header>
 
-        {/* Scrollable Content */}
+        {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto p-4 md:p-8">
-          <div className={`${activeTab === 'catalog' || activeTab === 'inventory' || activeTab === 'dashboard' ? 'max-w-6xl' : 'max-w-3xl'} mx-auto`}>
+          <div className={`${wideLayout.includes(activeTab) ? 'max-w-6xl' : 'max-w-3xl'} mx-auto`}>
             <AnimatePresence mode="popLayout">
-              {/* DASHBOARD TAB */}
-              {activeTab === 'dashboard' && (
-                <motion.div
-                  key="dashboard"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="space-y-6"
-                >
-                  {/* KPI Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm hover:border-amber-200 transition-colors group">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="p-2 bg-stone-100 rounded-lg text-stone-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
-                          <DollarSign size={20} />
-                        </div>
-                        <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full uppercase tracking-tighter">Live</span>
-                      </div>
-                      <p className="text-xs text-stone-500 uppercase tracking-widest font-semibold">{t.stats.totalSales}</p>
-                      <h3 className="text-2xl font-serif text-stone-900 mt-1">${dashboardStats?.totalSales?.toLocaleString() || 0}</h3>
-                      <p className="text-[10px] text-stone-400 mt-2">Historical Gross revenue</p>
-                    </div>
+              <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
 
-                    <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="p-2 bg-stone-100 rounded-lg text-stone-600">
-                          <ShoppingCart size={20} />
-                        </div>
-                      </div>
-                      <p className="text-xs text-stone-500 uppercase tracking-widest font-semibold">{t.stats.orders}</p>
-                      <h3 className="text-2xl font-serif text-stone-900 mt-1">{dashboardStats?.orderCount || 0}</h3>
-                      <p className="text-[10px] text-stone-400 mt-2">Successful transactions</p>
-                    </div>
+                {activeTab === 'dashboard' && (
+                  <DashboardTab
+                    dashboardStats={dashboardStats}
+                    t={t}
+                    onNavigateTo={(tab, filter) => { setActiveTab(tab); if (filter) setStockFilter(filter); setCurrentPage(1) }}
+                  />
+                )}
 
-                    <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="p-2 bg-stone-100 rounded-lg text-stone-600">
-                          <TrendingUp size={20} />
-                        </div>
-                      </div>
-                      <p className="text-xs text-stone-500 uppercase tracking-widest font-semibold">{t.stats.aov}</p>
-                      <h3 className="text-2xl font-serif text-stone-900 mt-1">${dashboardStats?.aov?.toLocaleString() || 0}</h3>
-                      <p className="text-[10px] text-stone-400 mt-2">Avg. Value per cart</p>
-                    </div>
+                {activeTab === 'catalog' && (
+                  <CatalogTab
+                    products={products}
+                    searchQuery={searchQuery} setSearchQuery={setSearchQuery}
+                    stockFilter={stockFilter} setStockFilter={setStockFilter}
+                    catalogViewMode={catalogViewMode} setCatalogViewMode={setCatalogViewMode}
+                    currentPage={currentPage} setCurrentPage={setCurrentPage}
+                    itemsPerPage={itemsPerPage}
+                    isMigrating={isMigrating}
+                    onNewProduct={() => setEditingProduct({ id: 'new', name: '', collection: 'Valentina', price: 4200, color: '', design: '', image: '', descEs: '', descEn: '', stock: 0, published: true })}
+                    onEditProduct={(p) => setEditingProduct(p)}
+                    onDeleteProduct={handleDeleteProduct}
+                    onOpenInventory={(p) => { setSelectedProductForInventory(p); setInventoryAdjustment({ type: 'IN', quantity: 1, reason: '' }) }}
+                    onMigrate={handleMigrate}
+                  />
+                )}
 
-                    <div 
-                      onClick={() => {
-                        setActiveTab('catalog');
-                        setStockFilter('low');
-                        setCurrentPage(1);
-                      }}
-                      className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm cursor-pointer hover:border-red-200 hover:bg-red-50/10 transition-all group"
-                    >
-                      <div className="flex justify-between items-start mb-4">
-                        <div className={`p-2 rounded-lg ${dashboardStats?.lowStockCount > 0 ? 'bg-red-50 text-red-600 group-hover:bg-red-600 group-hover:text-white' : 'bg-stone-100 text-stone-600'}`}>
-                          <Package size={20} />
-                        </div>
-                        {dashboardStats?.lowStockCount > 0 && (
-                          <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-1 rounded-full uppercase tracking-tighter animate-pulse">Revisar</span>
-                        )}
-                      </div>
-                      <p className="text-xs text-stone-500 uppercase tracking-widest font-semibold">{t.stats.lowStock}</p>
-                      <h3 className="text-2xl font-serif text-stone-900 mt-1">{dashboardStats?.lowStockCount || 0}</h3>
-                      <p className="text-[10px] text-stone-400 mt-2 flex items-center gap-1">Click para ver listado <ArrowRight size={10} /></p>
-                    </div>
-                  </div>
+                {activeTab === 'inventory' && <InventoryTab inventoryLogs={inventoryLogs} />}
 
-                  {/* Charts & Lists */}
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Sales Chart */}
-                    <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-stone-200 shadow-sm relative overflow-hidden">
-                      <div className="absolute top-0 right-0 p-4 opacity-5">
-                         <TrendingUp size={120} />
-                      </div>
-                      
-                      <h3 className="text-sm font-bold uppercase tracking-wider mb-8 text-stone-800 flex items-center justify-between">
-                        <span className="flex items-center gap-2">
-                          <Activity size={16} className="text-amber-600" />
-                          Ingresos Recientes (7d)
-                        </span>
-                        <div className="flex items-center gap-4">
-                          <div className="flex items-center gap-1.5">
-                            <div className="w-2.5 h-2.5 rounded-full bg-amber-600"></div>
-                            <span className="text-[10px] font-medium text-stone-500">Ventas</span>
-                          </div>
-                        </div>
-                      </h3>
-                      
-                      <div className="h-[280px] w-full">
-                        <ResponsiveContainer width="100%" height="100%" minHeight={280}>
-                          {dashboardStats?.salesByDay?.length > 0 ? (
-                            <AreaChart data={dashboardStats.salesByDay}>
-                              <defs>
-                                <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="5%" stopColor="#d97706" stopOpacity={0.1}/>
-                                  <stop offset="95%" stopColor="#d97706" stopOpacity={0}/>
-                                </linearGradient>
-                              </defs>
-                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f1f1" />
-                              <XAxis 
-                                dataKey="name" 
-                                axisLine={false} 
-                                tickLine={false} 
-                                tick={{fontSize: 10, fill: '#A3A3A3'}} 
-                                dy={10} 
-                              />
-                              <YAxis 
-                                axisLine={false} 
-                                tickLine={false} 
-                                tick={{fontSize: 10, fill: '#A3A3A3'}} 
-                                tickFormatter={(val) => `$${val/1000}k`} 
-                              />
-                              <Tooltip 
-                                cursor={{stroke: '#d97706', strokeWidth: 1}}
-                                contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)', padding: '12px'}}
-                              />
-                              <Area 
-                                type="monotone" 
-                                dataKey="ventas" 
-                                stroke="#d97706" 
-                                strokeWidth={3}
-                                fillOpacity={1} 
-                                fill="url(#colorSales)" 
-                                animationDuration={2000}
-                              />
-                            </AreaChart>
-                          ) : (
-                            <div className="flex items-center justify-center h-full text-stone-300 text-xs italic">
-                              Cargando datos del gráfico...
-                            </div>
-                          )}
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
+                {activeTab === 'users' && (
+                  <UsersTab
+                    users={users}
+                    userPage={userPage} setUserPage={setUserPage}
+                    itemsPerPage={itemsPerPage}
+                    onNewUser={() => setIsCreatingUser(true)}
+                    onUpdateRole={handleUpdateRole}
+                    onToggleStatus={handleToggleUserStatus}
+                    onDeleteUser={handleDeleteUser}
+                  />
+                )}
 
-                    {/* Activity Feed */}
-                    <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
-                      <h3 className="text-sm font-bold uppercase tracking-wider mb-6 text-stone-800 flex items-center gap-2">
-                        <Activity size={16} className="text-amber-600" />
-                        Actividad Reciente
-                      </h3>
-                      <div className="space-y-4">
-                        {dashboardStats?.recentActivity?.map((activity, idx) => (
-                          <div key={idx} className="flex gap-3 p-2 group hover:bg-stone-50 rounded-lg transition-colors">
-                            <div className={`w-1 h-10 rounded-full shrink-0 ${activity.type === 'SALE' ? 'bg-green-500' : 'bg-stone-200'}`}></div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[10px] font-bold text-stone-900 uppercase tracking-tighter truncate">
-                                {activity.product.name}
-                              </p>
-                              <p className="text-[10px] text-stone-500 mt-0.5">
-                                {activity.type === 'SALE' ? 'Venta' : activity.reason}
-                              </p>
-                              <p className="text-[8px] text-stone-400 mt-1 uppercase">
-                                {new Date(activity.createdAt).toLocaleDateString('es-MX', { hour: '2-digit', minute: '2-digit' })}
-                              </p>
-                            </div>
-                            <div className="text-right flex flex-col items-end">
-                              <span className={`text-[10px] font-bold ${activity.type === 'SALE' ? 'text-green-600' : 'text-stone-400'}`}>
-                                {activity.type === 'SALE' ? `-1` : activity.type === 'IN' ? `+${activity.quantity}` : `-${activity.quantity}`}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-              {/* GENERAL TAB */}
-              {activeTab === 'general' && (
-                <motion.div
-                  key="general"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="space-y-8"
-                >
-                  <div className="bg-white p-6 rounded-lg border border-stone-200 shadow-sm">
-                    <h2 className="text-sm font-bold uppercase tracking-wider mb-6 flex items-center gap-2">
-                      <Settings size={18} className="text-amber-600" />
-                      Información General
-                    </h2>
-                    
-                    <div className="space-y-5">
-                      <div>
-                        <label className="block text-xs font-semibold text-stone-500 mb-2 uppercase tracking-wide">Nombre del Sitio</label>
-                        <input 
-                          type="text" 
-                          value={config.siteName}
-                          onChange={(e) => setConfig({...config, siteName: e.target.value})}
-                          className="w-full border border-stone-300 rounded px-4 py-2 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-xs font-semibold text-stone-500 mb-2 uppercase tracking-wide">Número de WhatsApp (Ventas)</label>
-                        <div className="flex mb-1">
-                          <span className="bg-stone-100 border border-stone-300 border-r-0 rounded-l px-3 py-2 text-stone-500 flex items-center">
-                            +
-                          </span>
-                          <input 
-                            type="text" 
-                            value={config.whatsappNumber}
-                            onChange={(e) => setConfig({...config, whatsappNumber: e.target.value})}
-                            className="w-full border border-stone-300 rounded-r px-4 py-2 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all"
-                            placeholder="52 1 555 123 4567"
-                          />
-                        </div>
-                        <p className="text-[10px] text-stone-400">Incluye el código de país. Ej: 5215633551085</p>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
+                {activeTab === 'audit' && <AuditTab />}
 
-              {/* HERO & TEXTOS TAB */}
-              {activeTab === 'hero' && (
-                <motion.div
-                  key="hero"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="space-y-8"
-                >
-                  <div className="bg-white p-6 rounded-lg border border-stone-200 shadow-sm">
-                    <h2 className="text-sm font-bold uppercase tracking-wider mb-6 flex items-center gap-2">
-                      <Type size={18} className="text-amber-600" />
-                      Textos de Portada (Hero)
-                    </h2>
-                    
-                    <div className="space-y-5">
-                      <div>
-                        <label className="block text-xs font-semibold text-stone-500 mb-2 uppercase tracking-wide">Título Principal (Línea 1)</label>
-                        <input 
-                          type="text" 
-                          value={config.heroTitle1}
-                          onChange={(e) => setConfig({...config, heroTitle1: e.target.value})}
-                          className="w-full border border-stone-300 rounded px-4 py-2 font-serif text-lg focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-xs font-semibold text-stone-500 mb-2 uppercase tracking-wide">Título Principal (Línea 2 - Itálica)</label>
-                        <input 
-                          type="text" 
-                          value={config.heroTitle2}
-                          onChange={(e) => setConfig({...config, heroTitle2: e.target.value})}
-                          className="w-full border border-stone-300 rounded px-4 py-2 font-serif italic text-lg focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
-                        />
-                      </div>
+                {settingsTabs.includes(activeTab) && <SettingsTab activeTab={activeTab} config={config} setConfig={setConfig} />}
 
-                      <div>
-                        <label className="block text-xs font-semibold text-stone-500 mb-2 uppercase tracking-wide">Subtítulo (Microcopy)</label>
-                        <input 
-                          type="text" 
-                          value={config.heroSubtitle}
-                          onChange={(e) => setConfig({...config, heroSubtitle: e.target.value})}
-                          className="w-full border border-stone-300 rounded px-4 py-2 text-xs uppercase tracking-widest focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* CATALOG TAB */}
-              {activeTab === 'catalog' && (
-                <motion.div
-                  key="catalog"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="space-y-6"
-                >
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                    <div>
-                      <h2 className="text-2xl font-serif text-stone-800">Inventario y Catálogo</h2>
-                      <p className="text-sm text-stone-500 mt-1">Gestiona tus colecciones, precios y detalles de {products.length} productos.</p>
-                    </div>
-                    <button 
-                      onClick={() => setEditingProduct({ id: 'new', name: '', collection: 'Valentina', price: 4200, color: '', design: '', image: '/images/extracted/page_1_img_1.png', descEs: '', descEn: '' })}
-                      className="bg-amber-700 hover:bg-amber-800 text-white px-4 py-2 rounded text-xs uppercase tracking-widest font-bold transition-colors flex items-center gap-2 shrink-0"
-                    >
-                      <Plus size={16} />
-                      Nuevo Producto
-                    </button>
-                    {products.length === 0 && (
-                      <button 
-                        onClick={handleMigrate}
-                        disabled={isMigrating}
-                        className="bg-stone-800 hover:bg-black text-white px-4 py-2 rounded text-xs uppercase tracking-widest font-bold transition-colors flex items-center gap-2 shrink-0 disabled:opacity-50"
-                      >
-                        <Database size={16} />
-                        {isMigrating ? 'Migrando...' : 'Migrar desde constants.js'}
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Search, Filter and View Toggle */}
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="bg-white p-4 rounded-lg border border-stone-200 shadow-sm flex-1 flex items-center gap-3">
-                      <Search className="text-stone-400" size={20} />
-                      <input 
-                        type="text" 
-                        placeholder="Buscar por nombre, color o colección..." 
-                        className="flex-1 outline-none text-sm placeholder:text-stone-400"
-                        value={searchQuery}
-                        onChange={(e) => {
-                          setSearchQuery(e.target.value);
-                          setCurrentPage(1);
-                        }}
-                      />
-                    </div>
-                    
-                    {/* Stock Filter Pills */}
-                    <div className="flex bg-white p-1 rounded-lg border border-stone-200 shadow-sm gap-1 overflow-x-auto">
-                      {[
-                        { id: 'all', label: 'Todos', count: products.length },
-                        { id: 'low', label: 'Bajo Stock', count: products.filter(p => p.stock === 1).length, color: 'text-amber-600', bg: 'bg-amber-50' },
-                        { id: 'out', label: 'Agotados', count: products.filter(p => p.stock === 0).length, color: 'text-red-600', bg: 'bg-red-50' }
-                      ].map(f => (
-                        <button
-                          key={f.id}
-                          onClick={() => {
-                            setStockFilter(f.id);
-                            setCurrentPage(1);
-                          }}
-                          className={`px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-tight transition-all flex items-center gap-2 whitespace-nowrap ${
-                            stockFilter === f.id ? (f.bg || 'bg-stone-800') + ' ' + (f.color || 'text-white') : 'text-stone-400 hover:bg-stone-50'
-                          }`}
-                        >
-                          {f.label}
-                          <span className={`px-1.5 py-0.5 rounded-full text-[8px] ${stockFilter === f.id ? 'bg-white/20' : 'bg-stone-100'}`}>{f.count}</span>
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="bg-white p-2 rounded-lg border border-stone-200 shadow-sm flex items-center gap-1 shrink-0">
-                      <button 
-                        onClick={() => setCatalogViewMode('grid')}
-                        className={`p-2 rounded-md transition-colors ${catalogViewMode === 'grid' ? 'bg-stone-100 text-stone-900 shadow-sm border border-stone-200/50' : 'text-stone-400 hover:text-stone-600 hover:bg-stone-50'}`}
-                        title="Vista de Cuadrícula"
-                      >
-                        <Grid size={18} />
-                      </button>
-                      <button 
-                        onClick={() => setCatalogViewMode('list')}
-                        className={`p-2 rounded-md transition-colors ${catalogViewMode === 'list' ? 'bg-stone-100 text-stone-900 shadow-sm border border-stone-200/50' : 'text-stone-400 hover:text-stone-600 hover:bg-stone-50'}`}
-                        title="Vista de Lista"
-                      >
-                        <List size={18} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Content View */}
-                  {catalogViewMode === 'list' ? (
-                    <div className="bg-white border border-stone-200 rounded-lg shadow-sm overflow-hidden">
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                          <thead>
-                            <tr className="bg-stone-50 border-b border-stone-200 text-xs uppercase tracking-widest text-stone-500">
-                              <th className="p-4 font-semibold">Producto</th>
-                              <th className="p-4 font-semibold">Colección</th>
-                              <th className="p-4 font-semibold">Color / Diseño</th>
-                              <th className="p-4 font-semibold">Estado Stock</th>
-                              <th className="p-4 font-semibold">Precio (MXN)</th>
-                              <th className="p-4 font-semibold text-right">Acciones</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-stone-100">
-                            {paginatedProducts.map((product) => (
-                              <tr key={product.id} className="hover:bg-stone-50/50 transition-colors group">
-                                <td className="p-4 text-xs">
-                                  <div className="flex items-center gap-4">
-                                    <div className="w-12 h-16 bg-stone-100 rounded overflow-hidden relative border border-stone-200 shrink-0">
-                                      <Image src={product.image} alt={product.name} fill className="object-cover" />
-                                    </div>
-                                    <span className="font-serif text-base text-stone-800">{product.name}</span>
-                                  </div>
-                                </td>
-                                <td className="p-4">
-                                  <span className="px-2 py-1 bg-stone-100 text-stone-600 rounded text-xs tracking-wider">{product.collection}</span>
-                                </td>
-                                <td className="p-4">
-                                  <div className="text-sm text-stone-800">{product.color}</div>
-                                  <div className="text-xs text-stone-500">{product.design}</div>
-                                </td>
-                                <td className="p-4">
-                                  <div className="flex items-center gap-2">
-                                    <div className={`w-2 h-2 rounded-full ${product.stock === 0 ? 'bg-red-500 animate-pulse' : product.stock === 1 ? 'bg-amber-500' : 'bg-green-500'}`}></div>
-                                    <span className={`text-[11px] font-bold ${product.stock === 0 ? 'text-red-600' : product.stock === 1 ? 'text-amber-700' : 'text-stone-600'}`}>
-                                      {product.stock === 0 ? 'AGOTADO' : product.stock === 1 ? '¡ÚLTIMA!' : `${product.stock} disp.`}
-                                    </span>
-                                  </div>
-                                </td>
-                                <td className="p-4 font-medium text-stone-800">
-                                  ${product.price.toLocaleString()}
-                                </td>
-                                <td className="p-4 text-right">
-                                  <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button 
-                                      onClick={() => {
-                                        setSelectedProductForInventory(product);
-                                        setInventoryAdjustment({ type: 'IN', quantity: 1, reason: '' });
-                                      }} 
-                                      className="text-stone-400 hover:text-green-600 p-2 transition-colors"
-                                      title="Ajustar Stock"
-                                    >
-                                      <Box size={16} />
-                                    </button>
-                                    <button onClick={() => setEditingProduct(product)} className="text-stone-400 hover:text-amber-700 p-2 transition-colors">
-                                      <Edit2 size={16} />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-
-                        {processedProducts.length === 0 && (
-                          <div className="p-12 text-center text-stone-500 flex flex-col items-center">
-                            <Layout size={40} className="text-stone-300 mb-4" />
-                            <p>No se encontraron productos en tu búsqueda.</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                      {paginatedProducts.map(product => (
-                        <div key={product.id} className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all group">
-                          <div className="relative h-64 bg-stone-100">
-                            <Image src={product.image} fill className="object-cover group-hover:scale-105 transition-transform duration-700" alt={product.name} />
-                            
-                            {/* Stock Badge Overlay */}
-                            <div className="absolute top-3 left-3 flex flex-col gap-1.5">
-                              {product.stock === 0 ? (
-                                <span className="bg-red-600 text-white text-[9px] px-2 py-1 rounded font-bold uppercase tracking-widest shadow-lg">Agotado</span>
-                              ) : product.stock === 1 ? (
-                                <span className="bg-amber-500 text-white text-[9px] px-2 py-1 rounded font-bold uppercase tracking-widest shadow-lg">Última pieza</span>
-                              ) : null}
-                              {!product.published && (
-                                <span className="bg-black/80 backdrop-blur-sm text-white text-[9px] px-2 py-1 rounded font-bold uppercase tracking-widest">Oculto</span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="p-5">
-                            <div className="flex justify-between items-start mb-1">
-                              <h3 className="font-bold text-stone-900 uppercase tracking-tighter text-sm">{product.name}</h3>
-                              <span className="px-2 py-0.5 bg-stone-100 text-stone-600 rounded text-[9px] tracking-wider shrink-0 ml-2">{product.collection}</span>
-                            </div>
-                            <p className="text-stone-500 text-xs mb-4 font-light leading-relaxed">Stock: {product.stock}</p>
-                            <div className="flex justify-between items-center pt-4 border-t border-stone-100">
-                              <span className="font-serif text-lg text-stone-800">${product.price.toLocaleString()}</span>
-                              <div className="flex gap-2">
-                                 <button 
-                                  onClick={() => {
-                                    setSelectedProductForInventory(product);
-                                    setInventoryAdjustment({ type: 'IN', quantity: 1, reason: '' });
-                                  }}
-                                  className="p-2 text-stone-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                                  title="Ajustar Inventario"
-                                >
-                                  <Box size={16} />
-                                </button>
-                                <button onClick={() => setEditingProduct(product)} className="p-2 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
-                                  <Edit2 size={16} />
-                                </button>
-                                <button onClick={() => handleDeleteProduct(product.id)} className="p-2 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                                  <Trash2 size={16} />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Pagination Controls */}
-                  {totalPages > 1 && (
-                    <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white px-6 py-4 rounded-xl border border-stone-200 shadow-sm">
-                      <p className="text-[10px] md:text-xs text-stone-500 text-center sm:text-left">
-                        Mostrando <span className="font-bold">{(currentPage - 1) * itemsPerPage + 1}</span> a <span className="font-bold">{Math.min(currentPage * itemsPerPage, processedProducts.length)}</span> de <span className="font-bold">{processedProducts.length}</span> resultados
-                      </p>
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={() => {
-                            setCurrentPage(prev => Math.max(1, prev - 1));
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                          }}
-                          disabled={currentPage === 1}
-                          className="p-2 border border-stone-200 rounded-lg hover:bg-stone-50 disabled:opacity-30 transition-colors"
-                        >
-                          <ChevronLeft size={18} />
-                        </button>
-                        <div className="flex items-center px-4 text-[10px] md:text-xs font-bold tracking-widest uppercase">
-                          {currentPage} / {totalPages}
-                        </div>
-                        <button 
-                          onClick={() => {
-                            setCurrentPage(prev => Math.min(totalPages, prev + 1));
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                          }}
-                          disabled={currentPage === totalPages}
-                          className="p-2 border border-stone-200 rounded-lg hover:bg-stone-50 disabled:opacity-30 transition-colors"
-                        >
-                          <ChevronRight size={18} />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {processedProducts.length === 0 && (
-                    <div className="bg-white border border-stone-200 rounded-xl shadow-sm p-24 text-center text-stone-500 flex flex-col items-center">
-                      <Layout size={40} className="text-stone-300 mb-4" />
-                      <p className="font-serif text-xl text-stone-800 mb-2">No se encontraron productos</p>
-                      <p className="text-xs uppercase tracking-widest text-stone-400">Intenta ajustar los filtros de búsqueda o stock</p>
-                      <button 
-                        onClick={() => {
-                          setSearchQuery('');
-                          setStockFilter('all');
-                        }}
-                        className="mt-6 text-amber-700 text-xs font-bold uppercase tracking-widest hover:underline"
-                      >
-                        Limpiar todos los filtros
-                      </button>
-                    </div>
-                  )}
-                </motion.div>
-              )}
-
-              {/* USERS TAB */}
-              {activeTab === 'users' && (
-                <motion.div
-                  key="users"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="space-y-6"
-                >
-                  <div className="flex justify-between items-center mb-6">
-                    <div>
-                      <h2 className="text-2xl font-serif text-stone-800">Gestión de Usuarios</h2>
-                      <p className="text-sm text-stone-500 mt-1">Administra accesos y roles de administradores ({users.length} usuarios).</p>
-                    </div>
-                    <button 
-                      onClick={() => setIsCreatingUser(true)}
-                      className="bg-stone-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-xs font-bold uppercase tracking-widest hover:bg-stone-800 transition-colors"
-                    >
-                      <Plus size={14} /> Nuevo Usuario
-                    </button>
-                  </div>
-
-                  <div className="bg-white border border-stone-200 rounded-lg shadow-sm overflow-hidden">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="bg-stone-50 border-b border-stone-200 text-xs uppercase tracking-widest text-stone-500">
-                            <th className="p-4 font-semibold">Usuario</th>
-                            <th className="p-4 font-semibold">Rol</th>
-                            <th className="p-4 font-semibold">Estado</th>
-                            <th className="p-4 font-semibold text-right">Acciones</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-stone-100">
-                          {users.slice((userPage - 1) * itemsPerPage, userPage * itemsPerPage).map((user) => (
-                            <tr key={user.id} className="hover:bg-stone-50/50 transition-colors">
-                              <td className="p-4">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 rounded-full bg-stone-200 flex items-center justify-center text-stone-500 text-xs">
-                                    {user.email[0].toUpperCase()}
-                                  </div>
-                                  <span className="text-sm font-medium">{user.email}</span>
-                                </div>
-                              </td>
-                              <td className="p-4">
-                                <select 
-                                  value={user.role} 
-                                  onChange={(e) => handleUpdateRole(user.id, e.target.value)}
-                                  className="text-xs border border-stone-200 rounded px-2 py-1 bg-white outline-none focus:border-amber-500"
-                                >
-                                  <option value="admin">Admin</option>
-                                  <option value="editor">Editor</option>
-                                </select>
-                              </td>
-                              <td className="p-4 text-right">
-                                <button 
-                                  onClick={() => handleToggleUserStatus(user.id, user.active)}
-                                  className={`text-xs font-bold uppercase tracking-widest px-3 py-1 rounded transition-colors ${
-                                    user.active 
-                                      ? 'text-red-600 hover:bg-red-50' 
-                                      : 'text-green-600 hover:bg-green-50'
-                                  }`}
-                                >
-                                  {user.active ? 'Desactivar' : 'Activar'}
-                                </button>
-                                <button 
-                                  onClick={() => handleDeleteUser(user.id)}
-                                  className="p-2 text-stone-400 hover:text-red-600 transition-colors"
-                                  title="Eliminar usuario"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    </div>
-
-                    {/* User Pagination */}
-                    {Math.ceil(users.length / itemsPerPage) > 1 && (
-                      <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white px-6 py-4 rounded-xl border border-stone-200 shadow-sm">
-                        <p className="text-[10px] md:text-xs text-stone-500 text-center sm:text-left">
-                           Total de {users.length} usuarios
-                        </p>
-                        <div className="flex gap-2">
-                          <button 
-                            onClick={() => {
-                              setUserPage(prev => Math.max(1, prev - 1));
-                              window.scrollTo({ top: 0, behavior: 'smooth' });
-                            }}
-                            disabled={userPage === 1}
-                            className="p-2 border border-stone-200 rounded-lg hover:bg-stone-50 disabled:opacity-30 transition-colors"
-                          >
-                            <ChevronLeft size={18} />
-                          </button>
-                          <div className="flex items-center px-4 text-[10px] md:text-xs font-bold tracking-widest uppercase">
-                            {userPage} / {Math.ceil(users.length / itemsPerPage)}
-                          </div>
-                          <button 
-                            onClick={() => {
-                              setUserPage(prev => Math.min(Math.ceil(users.length / itemsPerPage), prev + 1));
-                              window.scrollTo({ top: 0, behavior: 'smooth' });
-                            }}
-                            disabled={userPage === Math.ceil(users.length / itemsPerPage)}
-                            className="p-2 border border-stone-200 rounded-lg hover:bg-stone-50 disabled:opacity-30 transition-colors"
-                          >
-                            <ChevronRight size={18} />
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </motion.div>
-              )}
-
-
-              {/* INVENTORY / HISTORY TAB */}
-              {activeTab === 'inventory' && (
-                <motion.div
-                  key="inventory"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="space-y-6"
-                >
-                  <div className="flex justify-between items-center mb-6">
-                    <div>
-                      <h2 className="text-2xl font-serif text-stone-800">Historial de Movimientos</h2>
-                      <p className="text-sm text-stone-500 mt-1">Registro detallado de entradas, salidas y ventas automáticas.</p>
-                    </div>
-                  </div>
-
-                  <div className="bg-white border border-stone-200 rounded-lg shadow-sm overflow-hidden">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="bg-stone-50 border-b border-stone-200 text-[10px] uppercase tracking-widest text-stone-500">
-                            <th className="p-4 font-semibold">Fecha</th>
-                            <th className="p-4 font-semibold">Producto</th>
-                            <th className="p-4 font-semibold">Tipo</th>
-                            <th className="p-4 font-semibold text-right">Cantidad</th>
-                            <th className="p-4 font-semibold">Motivo</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-stone-100">
-                          {inventoryLogs.map((log) => (
-                            <tr key={log.id} className="hover:bg-stone-50/50 transition-colors">
-                              <td className="p-4 text-[10px] text-stone-400 font-medium">
-                                {new Date(log.createdAt).toLocaleString('es-MX', { 
-                                  day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
-                                })}
-                              </td>
-                              <td className="p-4">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-8 h-10 bg-stone-100 rounded overflow-hidden relative border border-stone-200 shrink-0">
-                                    <Image src={log.product.image} alt="" fill className="object-cover" />
-                                  </div>
-                                  <span className="text-xs font-bold text-stone-800 uppercase tracking-tighter">{log.product.name}</span>
-                                </div>
-                              </td>
-                              <td className="p-4">
-                                <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${
-                                  log.type === 'IN' ? 'bg-green-50 text-green-700' : 
-                                  log.type === 'SALE' ? 'bg-blue-50 text-blue-700' : 
-                                  'bg-red-50 text-red-700'
-                                }`}>
-                                  {log.type === 'IN' ? 'Entrada' : log.type === 'SALE' ? 'Venta' : 'Salida'}
-                                </span>
-                              </td>
-                              <td className={`p-4 text-right font-bold text-sm ${
-                                log.type === 'IN' ? 'text-green-600' : 'text-stone-800'
-                              }`}>
-                                {log.type === 'IN' ? `+${log.quantity}` : `-${log.quantity}`}
-                              </td>
-                              <td className="p-4 text-xs text-stone-500 font-light italic">
-                                {log.reason}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      
-                      {inventoryLogs.length === 0 && (
-                        <div className="p-12 text-center text-stone-400 flex flex-col items-center">
-                          <Activity size={32} className="text-stone-200 mb-3" />
-                          <p className="text-sm">No hay registros de movimientos aún.</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* THEME TAB */}
-              {activeTab === 'theme' && (
-                <motion.div
-                  key="theme"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="space-y-8"
-                >
-                  <div className="bg-white p-6 rounded-lg border border-stone-200 shadow-sm">
-                    <h2 className="text-sm font-bold uppercase tracking-wider mb-6 flex items-center gap-2">
-                      <Palette size={18} className="text-amber-600" />
-                      Apariencia y Colores
-                    </h2>
-                    
-                    <div className="space-y-6">
-                      <div>
-                        <label className="block text-xs font-semibold text-stone-500 mb-3 uppercase tracking-wide">Color Brand Principal</label>
-                        <div className="flex items-center gap-4">
-                          <input 
-                            type="color" 
-                            value={config.primaryColor}
-                            onChange={(e) => setConfig({...config, primaryColor: e.target.value})}
-                            className="w-12 h-12 rounded cursor-pointer border-0 p-0 shadow-sm"
-                          />
-                          <input 
-                            type="text" 
-                            value={config.primaryColor}
-                            onChange={(e) => setConfig({...config, primaryColor: e.target.value})}
-                            className="border border-stone-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 font-mono text-stone-600"
-                          />
-                        </div>
-                        <p className="text-[10px] text-stone-400 mt-2">Este color dicta los acentos, botones primarios e interacciones flotantes.</p>
-                      </div>
-                      
-                      <div className="pt-6 border-t border-stone-100">
-                        <label className="block text-xs font-semibold text-stone-500 mb-4 uppercase tracking-wide">Color de Fondo Principal</label>
-                        <div className="flex gap-4">
-                           {['#fafafa', '#ffffff', '#f5f5f4', '#fdfbf7'].map(color => (
-                             <button
-                               key={color}
-                               onClick={() => setConfig({...config, backgroundColor: color})}
-                               className={`w-12 h-12 rounded-full border-2 transition-all ${config.backgroundColor === color ? 'border-amber-600 scale-110 shadow-md ring-2 ring-amber-600/20 ring-offset-2' : 'border-stone-200 hover:scale-105'}`}
-                               style={{ backgroundColor: color }}
-                             />
-                           ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* MEDIA TAB */}
-              {activeTab === 'media' && (
-                <motion.div
-                  key="media"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="space-y-8"
-                >
-                  <div className="bg-white p-6 rounded-lg border border-stone-200 shadow-sm">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                      <h2 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-                        <ImageIcon size={18} className="text-amber-600" />
-                        Galería Multimedia Global
-                      </h2>
-                      <button className="text-amber-700 bg-amber-50 border border-amber-200 px-4 py-2 rounded flex items-center gap-2 text-xs font-bold uppercase tracking-widest hover:bg-amber-100 transition-colors">
-                        <Plus size={14} /> Subir Imagen
-                      </button>
-                    </div>
-
-                    <p className="text-sm text-stone-500 mb-8 font-light">
-                      Gestiona las imágenes maestras que se usan en la página principal, orígenes, banners decorativos u otras vistas no ligadas al inventario.
-                    </p>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                      {[
-                        { id: 1, src: '/images/Gemini_Generated_Image_de5chode5chode5c.png', tag: 'Hero Cover' },
-                        { id: 2, src: '/images/extracted/page_1_img_1.png', tag: 'Textura' },
-                        { id: 3, src: '/images/extracted/page_2_img_1.jpeg', tag: 'Detalle Piel' },
-                        { id: 4, src: '/images/extracted/page_9_img_1.jpeg', tag: 'Banner Amor' },
-                      ].map(img => (
-                        <div key={img.id} className="group relative aspect-square bg-stone-100 rounded-lg overflow-hidden border border-stone-200">
-                          <Image src={img.src} alt={img.tag} fill className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
-                            <span className="text-white text-xs font-bold tracking-widest uppercase mb-3">{img.tag}</span>
-                            <div className="flex gap-2">
-                              <button className="flex-1 bg-white/20 hover:bg-white/40 backdrop-blur-md rounded py-1.5 text-white transition-colors flex justify-center">
-                                <Edit2 size={14} />
-                              </button>
-                              <button className="flex-1 bg-red-500/80 hover:bg-red-500 backdrop-blur-md rounded py-1.5 text-white transition-colors flex justify-center">
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
+              </motion.div>
             </AnimatePresence>
           </div>
         </div>
 
-        {/* Modal for Editing/Adding Product */}
+        {/* Modals */}
         <AnimatePresence>
           {editingProduct && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <motion.div 
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-black/50 backdrop-blur-sm cursor-pointer"
-                onClick={() => setEditingProduct(null)}
-              />
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="bg-white w-full max-w-2xl rounded-xl shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]"
-              >
-                <div className="p-6 border-b border-stone-100 flex justify-between items-center shrink-0">
-                  <h3 className="font-serif text-2xl">{editingProduct.id === 'new' ? 'Agregar Producto' : 'Editar Producto'}</h3>
-                  <button onClick={() => setEditingProduct(null)} className="text-stone-400 hover:text-stone-800 transition-colors">
-                    <X size={24} />
-                  </button>
-                </div>
-                
-                <div className="p-6 overflow-y-auto flex-1">
-                  <form id="productForm" onSubmit={handleSaveProduct} className="space-y-6">
-                    <div className="flex gap-6 items-start">
-                      <div className="w-1/3 space-y-2">
-                        <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wide">Imagen</label>
-                        <div className="aspect-[3/4] bg-stone-100 rounded-lg border border-stone-200 border-dashed flex items-center justify-center relative overflow-hidden group hover:bg-stone-50 transition-colors cursor-pointer">
-                          <Image src={editingProduct.image || '/images/extracted/page_1_img_1.png'} alt="Preview" fill className="object-cover" />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                            <ImageIcon size={24} />
-                          </div>
-                        </div>
-                        <input 
-                          type="text" 
-                          placeholder="URL / Ruta de la imagen" 
-                          value={editingProduct.image}
-                          onChange={(e) => setEditingProduct({...editingProduct, image: e.target.value})}
-                          className="w-full text-[10px] p-2 border border-stone-200 rounded outline-none focus:border-amber-500 mt-2"
-                        />
-                      </div>
-                      
-                      <div className="w-2/3 space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-xs font-semibold text-stone-500 mb-1 uppercase tracking-wide">Nombre</label>
-                            <input 
-                              type="text" required
-                              value={editingProduct.name} onChange={(e) => setEditingProduct({...editingProduct, name: e.target.value})}
-                              className="w-full border border-stone-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-semibold text-stone-500 mb-1 uppercase tracking-wide">Colección</label>
-                            <select 
-                              value={editingProduct.collection} onChange={(e) => setEditingProduct({...editingProduct, collection: e.target.value})}
-                              className="w-full border border-stone-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500 outline-none bg-white"
-                            >
-                              <option value="Valentina">Valentina</option>
-                              <option value="Love">Love</option>
-                              <option value="Amelia">Amelia</option>
-                              <option value="Inés">Inés</option>
-                              <option value="Accesorios">Accesorios</option>
-                            </select>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-xs font-semibold text-stone-500 mb-1 uppercase tracking-wide">Color</label>
-                            <input 
-                              type="text" required
-                              value={editingProduct.color} onChange={(e) => setEditingProduct({...editingProduct, color: e.target.value})}
-                              className="w-full border border-stone-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-semibold text-stone-500 mb-1 uppercase tracking-wide">Precio ($ MXN)</label>
-                            <input 
-                              type="number" required min="0" step="100"
-                              value={editingProduct.price} onChange={(e) => setEditingProduct({...editingProduct, price: parseInt(e.target.value)})}
-                              className="w-full border border-stone-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-xs font-semibold text-stone-500 mb-1 uppercase tracking-wide">Stock Inicial</label>
-                            <input 
-                              type="number" required min="0"
-                              value={editingProduct.stock || 0} onChange={(e) => setEditingProduct({...editingProduct, stock: parseInt(e.target.value)})}
-                              className="w-full border border-stone-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                            />
-                          </div>
-                          <div className="flex items-center gap-3 pt-6">
-                            <input 
-                              type="checkbox"
-                              id="isPublished"
-                              checked={editingProduct.published}
-                              onChange={(e) => setEditingProduct({...editingProduct, published: e.target.checked})}
-                              className="w-4 h-4 text-amber-600 focus:ring-amber-500 border-stone-300 rounded"
-                            />
-                            <label htmlFor="isPublished" className="text-xs font-bold text-stone-700 uppercase tracking-widest cursor-pointer">Publicado</label>
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-semibold text-stone-500 mb-1 uppercase tracking-wide">Diseño (Bordado / Variante)</label>
-                          <input 
-                            type="text" required
-                            value={editingProduct.design} onChange={(e) => setEditingProduct({...editingProduct, design: e.target.value})}
-                            className="w-full border border-stone-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-semibold text-stone-500 mb-1 uppercase tracking-wide">Descripción Detallada (Español)</label>
-                          <textarea 
-                            rows="3" required
-                            value={editingProduct.descEs || ''} onChange={(e) => setEditingProduct({...editingProduct, descEs: e.target.value})}
-                            className="w-full border border-stone-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500 outline-none resize-none"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </form>
-                </div>
-                
-                <div className="p-6 border-t border-stone-100 bg-stone-50 flex justify-end gap-3 shrink-0">
-                  <button onClick={() => setEditingProduct(null)} type="button" className="px-5 py-2 rounded text-stone-600 font-medium hover:bg-stone-200 transition-colors text-sm">
-                    Cancelar
-                  </button>
-                  <button form="productForm" type="submit" className="px-5 py-2 rounded bg-black text-white font-medium hover:bg-stone-800 transition-colors text-sm flex items-center gap-2">
-                    <Save size={16} />
-                    Guardar Producto
-                  </button>
-                </div>
-              </motion.div>
-            </div>
+            <ProductModal
+              product={editingProduct}
+              onClose={() => setEditingProduct(null)}
+              onSave={handleSaveProduct}
+            />
           )}
-        </AnimatePresence>
-
-        {/* INVENTORY ADJUSTMENT MODAL */}
-        <AnimatePresence>
           {selectedProductForInventory && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-              <motion.div 
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                onClick={() => setSelectedProductForInventory(null)}
-              />
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden relative z-10"
-              >
-                <div className="p-6 border-b border-stone-100 flex justify-between items-center">
-                  <h3 className="font-serif text-lg">Ajuste de Inventario</h3>
-                  <button onClick={() => setSelectedProductForInventory(null)} className="text-stone-400 hover:text-black">
-                    <X size={20} />
-                  </button>
-                </div>
-                
-                <form onSubmit={handleAdjustStock} className="p-6 space-y-6">
-                  <div className="flex items-center gap-4 p-4 bg-stone-50 rounded-lg">
-                    <div className="w-12 h-16 bg-white relative border border-stone-200">
-                      <Image src={selectedProductForInventory.image} fill className="object-cover" alt="" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-widest text-stone-900">{selectedProductForInventory.name}</p>
-                      <p className="text-[10px] text-stone-500">Stock Actual: {selectedProductForInventory.stock} unidades</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <button 
-                      type="button"
-                      onClick={() => setInventoryAdjustment({...inventoryAdjustment, type: 'IN'})}
-                      className={`flex items-center justify-center gap-2 py-3 rounded-lg border font-bold text-[10px] uppercase tracking-widest transition-all ${
-                        inventoryAdjustment.type === 'IN' ? 'bg-green-50 border-green-200 text-green-700 shadow-sm' : 'border-stone-200 text-stone-400'
-                      }`}
-                    >
-                      <Plus size={14} /> Entrada
-                    </button>
-                    <button 
-                      type="button"
-                      onClick={() => setInventoryAdjustment({...inventoryAdjustment, type: 'OUT'})}
-                      className={`flex items-center justify-center gap-2 py-3 rounded-lg border font-bold text-[10px] uppercase tracking-widest transition-all ${
-                        inventoryAdjustment.type === 'OUT' ? 'bg-red-50 border-red-200 text-red-700 shadow-sm' : 'border-stone-200 text-stone-400'
-                      }`}
-                    >
-                      <Trash2 size={14} /> Salida
-                    </button>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-2">Cantidad</label>
-                      <input 
-                        type="number" 
-                        min="1"
-                        value={inventoryAdjustment.quantity}
-                        onChange={(e) => setInventoryAdjustment({...inventoryAdjustment, quantity: e.target.value})}
-                        className="w-full border border-stone-300 rounded px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500/20 outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-2">Motivo / Razón</label>
-                      <input 
-                        type="text" 
-                        placeholder="Ej: Reabastecimiento, Devolución..."
-                        value={inventoryAdjustment.reason}
-                        onChange={(e) => setInventoryAdjustment({...inventoryAdjustment, reason: e.target.value})}
-                        className="w-full border border-stone-300 rounded px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500/20 outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <button 
-                    type="submit"
-                    disabled={isAdjustingStock}
-                    className="w-full bg-black text-white py-4 rounded-lg text-xs font-bold uppercase tracking-[0.2em] hover:bg-stone-800 transition-all disabled:opacity-50"
-                  >
-                    {isAdjustingStock ? 'Procesando...' : 'Aplicar Movimiento'}
-                  </button>
-                </form>
-              </motion.div>
-            </div>
+            <InventoryModal
+              product={selectedProductForInventory}
+              adjustment={inventoryAdjustment}
+              setAdjustment={setInventoryAdjustment}
+              isAdjusting={isAdjustingStock}
+              onClose={() => setSelectedProductForInventory(null)}
+              onSubmit={handleAdjustStock}
+            />
           )}
-        </AnimatePresence>
- 
-        {/* NEW USER MODAL */}
-        <AnimatePresence>
           {isCreatingUser && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <motion.div 
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-                onClick={() => setIsCreatingUser(false)}
-              />
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-white w-full max-w-md rounded-xl shadow-2xl relative z-10 overflow-hidden"
-              >
-                <div className="p-6 border-b border-stone-100 flex justify-between items-center">
-                  <h3 className="font-serif text-xl">Nuevo Usuario</h3>
-                  <button onClick={() => setIsCreatingUser(false)} className="text-stone-400 hover:text-stone-800">
-                    <X size={20} />
-                  </button>
-                </div>
-                <form onSubmit={handleCreateUser} className="p-6 space-y-4">
-                  <div>
-                    <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-2">Email</label>
-                    <input 
-                      type="email" required
-                      value={newUser.email} onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                      className="w-full border border-stone-300 rounded px-4 py-2 text-sm outline-none focus:border-amber-500"
-                      placeholder="admin@0880mx.com"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-2">Contraseña</label>
-                    <input 
-                      type="password" required minLength={6}
-                      value={newUser.password} onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                      className="w-full border border-stone-300 rounded px-4 py-2 text-sm outline-none focus:border-amber-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-2">Rol</label>
-                    <select 
-                      value={newUser.role} onChange={(e) => setNewUser({...newUser, role: e.target.value})}
-                      className="w-full border border-stone-300 rounded px-4 py-2 text-sm outline-none focus:border-amber-500 bg-white"
-                    >
-                      <option value="admin">Administrador (Acceso Total)</option>
-                      <option value="editor">Editor (Sólo Catálogo)</option>
-                    </select>
-                  </div>
-                  <button 
-                    type="submit"
-                    className="w-full bg-black text-white py-3 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-stone-800 transition-colors mt-4"
-                  >
-                    Crear Usuario
-                  </button>
-                </form>
-              </motion.div>
-            </div>
-          )}
-          {/* STOCK ADJUSTMENT MODAL */}
-          {selectedProductForInventory && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-stone-200"
-              >
-                <div className="p-6 border-b border-stone-100 flex justify-between items-center bg-stone-50/50">
-                  <div>
-                    <h3 className="font-serif text-xl text-stone-800">Ajustar Inventario</h3>
-                    <p className="text-[10px] text-stone-500 uppercase tracking-widest mt-1">{selectedProductForInventory.name}</p>
-                  </div>
-                  <button onClick={() => setSelectedProductForInventory(null)} className="text-stone-400 hover:text-stone-800 bg-white p-1.5 rounded-full border border-stone-200">
-                    <X size={20} />
-                  </button>
-                </div>
-
-                <form onSubmit={handleAdjustStock} className="p-6 space-y-6">
-                  <div className="grid grid-cols-2 gap-4 text-center">
-                    <div className="p-3 bg-stone-50 rounded-xl border border-stone-100">
-                      <p className="text-[9px] uppercase tracking-widest text-stone-400 mb-1">Stock Actual</p>
-                      <p className="text-2xl font-serif text-stone-800">{selectedProductForInventory.stock}</p>
-                    </div>
-                    <div className="p-3 bg-amber-50 rounded-xl border border-amber-100">
-                      <p className="text-[9px] uppercase tracking-widest text-amber-600 mb-1">Nuevo Stock</p>
-                      <p className="text-2xl font-serif text-amber-900">
-                        {inventoryAdjustment.type === 'IN' 
-                          ? selectedProductForInventory.stock + (parseInt(inventoryAdjustment.quantity) || 0)
-                          : selectedProductForInventory.stock - (parseInt(inventoryAdjustment.quantity) || 0)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="flex bg-stone-100 p-1 rounded-lg">
-                      <button 
-                        type="button"
-                        onClick={() => setInventoryAdjustment({...inventoryAdjustment, type: 'IN'})}
-                        className={`flex-1 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-md transition-all ${inventoryAdjustment.type === 'IN' ? 'bg-white text-green-600 shadow-sm' : 'text-stone-400'}`}
-                      >
-                        Entrada (+)
-                      </button>
-                      <button 
-                        type="button"
-                        onClick={() => setInventoryAdjustment({...inventoryAdjustment, type: 'OUT'})}
-                        className={`flex-1 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-md transition-all ${inventoryAdjustment.type === 'OUT' ? 'bg-white text-red-600 shadow-sm' : 'text-stone-400'}`}
-                      >
-                        Salida (-)
-                      </button>
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-2">Cantidad</label>
-                      <input 
-                        type="number" min="1" required
-                        value={inventoryAdjustment.quantity}
-                        onChange={(e) => setInventoryAdjustment({...inventoryAdjustment, quantity: e.target.value})}
-                        className="w-full border border-stone-300 rounded-xl px-4 py-3 text-lg font-serif outline-none focus:border-amber-500 transition-all bg-stone-50 focus:bg-white"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-2">Motivo de Ajuste (Obligatorio)</label>
-                      <textarea 
-                        required
-                        value={inventoryAdjustment.reason}
-                        onChange={(e) => setInventoryAdjustment({...inventoryAdjustment, reason: e.target.value})}
-                        className="w-full border border-stone-300 rounded-xl px-4 py-3 text-sm outline-none focus:border-amber-500 transition-all bg-stone-50 focus:bg-white min-h-[100px]"
-                        placeholder="Ej: Reabastecimiento de colección, Ajuste por merma, Error en conteo anterior..."
-                      />
-                    </div>
-                  </div>
-
-                  <button 
-                    type="submit"
-                    disabled={isAdjustingStock || !inventoryAdjustment.reason}
-                    className="w-full bg-black text-white py-4 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-stone-800 transition-colors disabled:opacity-50 shadow-lg shadow-stone-200"
-                  >
-                    {isAdjustingStock ? 'Procesando...' : 'Confirmar Ajuste'}
-                  </button>
-                </form>
-              </motion.div>
-            </div>
+            <UserModal
+              newUser={newUser}
+              setNewUser={setNewUser}
+              onClose={() => setIsCreatingUser(false)}
+              onSubmit={handleCreateUser}
+            />
           )}
         </AnimatePresence>
-
       </main>
     </div>
-  );
+  )
 }
