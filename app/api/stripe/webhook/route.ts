@@ -10,7 +10,31 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
+function addressFromSession(session: any) {
+  const shipping = session.shipping_details || {};
+  const customer = session.customer_details || {};
+  const address = shipping.address || customer.address || {};
+
+  return {
+    customerName: customer.name || shipping.name || null,
+    customerPhone: customer.phone || shipping.phone || null,
+    shippingName: shipping.name || customer.name || null,
+    shippingPhone: shipping.phone || customer.phone || null,
+    shippingLine1: address.line1 || null,
+    shippingLine2: address.line2 || null,
+    shippingCity: address.city || null,
+    shippingState: address.state || null,
+    shippingPostalCode: address.postal_code || null,
+    shippingCountry: address.country || null,
+  };
+}
+
 export async function POST(req: NextRequest) {
+  if (!webhookSecret) {
+    logger.error('STRIPE_WEBHOOK_SECRET no está configurado');
+    return NextResponse.json({ error: 'Webhook no configurado' }, { status: 500 });
+  }
+
   const body = await req.text();
   const signature = req.headers.get('stripe-signature')!;
 
@@ -28,11 +52,32 @@ export async function POST(req: NextRequest) {
     case 'checkout.session.completed':
       const session = event.data.object as any;
       const productId = parseInt(session.metadata?.productId || '0');
+      const shippingData = addressFromSession(session);
       
       logger.info(`EVENTO: Checkout completado para sesión ${session.id}. ID Producto: ${productId}`);
       console.log('--- STRIPE WEBHOOK DEBUG ---');
       console.log('Payment Status:', session.payment_status);
       console.log('Metadata:', session.metadata);
+      console.log('Shipping:', session.shipping_details);
+
+      if (session.payment_status !== 'paid') {
+        logger.warn(`Checkout completado sin pago confirmado para sesión ${session.id}: ${session.payment_status}`);
+        break;
+      }
+
+      const existingOrder = await prisma.order.findUnique({
+        where: { stripeSessionId: session.id },
+      });
+
+      if (existingOrder) {
+        logger.info(`Pedido ya procesado para sesión ${session.id}; ignorando reintento de webhook.`);
+        break;
+      }
+
+      if (shippingData.shippingCountry !== 'MX') {
+        logger.error(`Sesión ${session.id} sin dirección de envío mexicana. País recibido: ${shippingData.shippingCountry || 'N/A'}`);
+        throw new Error('La dirección de envío debe estar en México');
+      }
       
       if (productId > 0) {
         try {
@@ -44,6 +89,7 @@ export async function POST(req: NextRequest) {
                 productId,
                 total: Math.round((session.amount_total || 0) / 100), // Convertir a MXN
                 customerEmail: session.customer_details?.email || 'unknown',
+                ...shippingData,
                 stripeSessionId: session.id,
                 status: 'succeeded'
               }

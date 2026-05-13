@@ -47,6 +47,16 @@ model Order {
   product         Product   @relation(fields: [productId], references: [id])
   total           Int
   customerEmail   String
+  customerName    String?
+  customerPhone   String?
+  shippingName    String?
+  shippingPhone   String?
+  shippingLine1   String?
+  shippingLine2   String?
+  shippingCity    String?
+  shippingState   String?
+  shippingPostalCode String?
+  shippingCountry String?
   status          String    @default("succeeded") // succeeded, pending, failed
   stripeSessionId String    @unique
   shippingStatus  String    @default("pending") // pending, processing, shipped, delivered

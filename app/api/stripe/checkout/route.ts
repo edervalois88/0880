@@ -8,12 +8,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(req: NextRequest) {
   try {
-    const { productId, name, price, image } = await req.json();
+    const { productId } = await req.json();
 
     // Obtener la URL base de forma robusta
     const baseUrl = process.env.NEXTAUTH_URL || `https://${req.headers.get('host')}`;
 
-    if (!productId || !name || !price) {
+    if (!productId) {
       return NextResponse.json({ error: 'Faltan datos del producto' }, { status: 400 });
     }
 
@@ -24,21 +24,26 @@ export async function POST(req: NextRequest) {
     }
 
     // El precio viene en MXN, Stripe lo espera en centavos
-    const amount = Math.round(price * 100);
+    const amount = Math.round(product.price * 100);
 
     // Asegurar que la imagen sea una URL completa
-    const imageUrl = image?.startsWith('http') ? image : `${baseUrl}${image}`;
+    const imageUrl = product.image?.startsWith('http') ? product.image : `${baseUrl}${product.image}`;
 
-    console.log('Iniciando Checkout para:', { name, amount, imageUrl, baseUrl });
+    console.log('Iniciando Checkout para:', { name: product.name, amount, imageUrl, baseUrl });
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
+      billing_address_collection: 'required',
+      phone_number_collection: { enabled: true },
+      shipping_address_collection: {
+        allowed_countries: ['MX'],
+      },
       line_items: [
         {
           price_data: {
             currency: 'mxn',
             product_data: {
-              name: name,
+              name: product.name,
               images: [imageUrl],
             },
             unit_amount: amount,
@@ -50,7 +55,7 @@ export async function POST(req: NextRequest) {
       success_url: `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/#catalog`,
       metadata: {
-        productId: productId.toString(),
+        productId: product.id.toString(),
       },
     });
 

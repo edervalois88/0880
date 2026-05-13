@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, X, Package, Truck, CheckCircle, Clock, ChevronDown } from 'lucide-react'
+import { Search, X, Package, Truck, CheckCircle, Clock, ChevronDown, MapPin, Phone } from 'lucide-react'
 import Image from 'next/image'
 import { getOrders, updateOrderFulfillment } from '@/lib/server-actions'
 import toast from 'react-hot-toast'
@@ -38,6 +38,15 @@ function StatusBadge({ status }) {
       {STATUS_LABELS[status] || status}
     </span>
   )
+}
+
+function formatAddress(order) {
+  return [
+    order.shippingLine1,
+    order.shippingLine2,
+    [order.shippingPostalCode, order.shippingCity, order.shippingState].filter(Boolean).join(' '),
+    order.shippingCountry === 'MX' ? 'Mexico' : order.shippingCountry,
+  ].filter(Boolean)
 }
 
 function OrderDetailModal({ order, onClose }) {
@@ -103,10 +112,36 @@ function OrderDetailModal({ order, onClose }) {
           {/* Customer */}
           <div>
             <p className="text-[9px] uppercase tracking-widest text-stone-400 mb-1">Cliente</p>
+            {order.customerName && <p className="text-sm text-stone-800">{order.customerName}</p>}
             <p className="text-sm text-stone-800">{order.customerEmail}</p>
+            {order.customerPhone && (
+              <p className="text-xs text-stone-500 mt-1 flex items-center gap-1.5">
+                <Phone size={12} />
+                {order.customerPhone}
+              </p>
+            )}
             <p className="text-[10px] text-stone-400 mt-0.5">
               {new Date(order.createdAt).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
             </p>
+          </div>
+
+          {/* Shipping address */}
+          <div>
+            <p className="text-[9px] uppercase tracking-widest text-stone-400 mb-1">Dirección de Envío</p>
+            {formatAddress(order).length > 0 ? (
+              <div className="text-sm text-stone-700 leading-relaxed">
+                {order.shippingName && order.shippingName !== order.customerName && (
+                  <p className="font-medium text-stone-800">{order.shippingName}</p>
+                )}
+                {formatAddress(order).map((line, index) => (
+                  <p key={index}>{line}</p>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                Sin dirección registrada. Verifica que el pedido se haya creado con la nueva configuración de Stripe.
+              </p>
+            )}
           </div>
 
           <form onSubmit={handleSave} className="space-y-4">
@@ -249,6 +284,7 @@ export default function OrdersTab() {
                   <th className="text-left px-4 py-3 text-[9px] font-bold uppercase tracking-widest text-stone-400">Pedido</th>
                   <th className="text-left px-4 py-3 text-[9px] font-bold uppercase tracking-widest text-stone-400">Producto</th>
                   <th className="text-left px-4 py-3 text-[9px] font-bold uppercase tracking-widest text-stone-400 hidden md:table-cell">Cliente</th>
+                  <th className="text-left px-4 py-3 text-[9px] font-bold uppercase tracking-widest text-stone-400 hidden xl:table-cell">Dirección</th>
                   <th className="text-left px-4 py-3 text-[9px] font-bold uppercase tracking-widest text-stone-400">Total</th>
                   <th className="text-left px-4 py-3 text-[9px] font-bold uppercase tracking-widest text-stone-400">Envío</th>
                   <th className="text-left px-4 py-3 text-[9px] font-bold uppercase tracking-widest text-stone-400 hidden lg:table-cell">Fecha</th>
@@ -272,7 +308,22 @@ export default function OrdersTab() {
                       </div>
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell">
-                      <span className="text-stone-500 text-xs">{order.customerEmail}</span>
+                      <div className="space-y-0.5">
+                        {order.customerName && <p className="text-stone-800 text-xs">{order.customerName}</p>}
+                        <p className="text-stone-500 text-xs">{order.customerEmail}</p>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 hidden xl:table-cell">
+                      {formatAddress(order).length > 0 ? (
+                        <div className="flex items-start gap-2 max-w-[260px]">
+                          <MapPin size={12} className="text-stone-400 mt-0.5 shrink-0" />
+                          <span className="text-stone-500 text-xs leading-relaxed line-clamp-2">
+                            {formatAddress(order).join(', ')}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-amber-700 text-[10px] uppercase tracking-widest">Pendiente</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-stone-800 font-medium text-xs">${order.total.toLocaleString('es-MX')}</span>
