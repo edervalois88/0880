@@ -515,6 +515,11 @@ export async function getOrders(filters?: { search?: string; status?: string; re
       ]
     }
 
+    // Collection filter
+    if (filters?.collection) {
+      where.product = { collection: filters.collection }
+    }
+
     // Status filter
     if (filters?.status && filters.status !== 'all') {
       where.shippingStatus = filters.status
@@ -525,12 +530,24 @@ export async function getOrders(filters?: { search?: string; status?: string; re
       where.needsReview = true
     }
 
-    return await prisma.order.findMany({
+    const orders = await prisma.order.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       include: { product: { select: { name: true, image: true, collection: true } } },
       take: 100,
     })
+
+    // Fetch distinct collections
+    const collections = (
+      await prisma.product.findMany({
+        distinct: ['collection'],
+        select: { collection: true },
+      })
+    )
+      .map((p) => p.collection)
+      .sort()
+
+    return { orders, collections }
   } catch (error) {
     throw new Error('Error fetching orders')
   }
