@@ -50,3 +50,4 @@ next-env.d.ts
 # Claude Code local tooling artifacts (not part of the app)
 .claude/
 .claire/
+.worktrees/
