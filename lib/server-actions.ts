@@ -579,8 +579,8 @@ export async function getCustomers() {
     for (const order of orders) {
       const shippingAddress = {
         name: order.shippingName || null,
-        line1: order.shippingAddressLine1 || null,
-        line2: order.shippingAddressLine2 || null,
+        line1: order.shippingLine1 || null,
+        line2: order.shippingLine2 || null,
         city: order.shippingCity || null,
         state: order.shippingState || null,
         postalCode: order.shippingPostalCode || null,
