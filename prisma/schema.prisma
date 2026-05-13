@@ -57,6 +57,10 @@ model Order {
   shippingState   String?
   shippingPostalCode String?
   shippingCountry String?
+  shippingNeighborhood String?   // Colonia (México)
+  shippingReferences   String?   // Entre calles / referencias
+  needsReview          Boolean   @default(false)
+  reviewReason         String?
   status          String    @default("succeeded") // succeeded, pending, failed
   stripeSessionId String    @unique
   shippingStatus  String    @default("pending") // pending, processing, shipped, delivered
