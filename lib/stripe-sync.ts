@@ -1,5 +1,10 @@
 // lib/stripe-sync.ts
 import 'server-only'
+// Deep import: Stripe SDK v22's default export (`StripeConstructor`) does not
+// expose the `Stripe.Checkout.Session` / `Stripe.Event` namespaces for type
+// usage when `tsconfig.moduleResolution` is set to "node". Importing from the
+// internal core module is the workaround. If `moduleResolution` is upgraded
+// to "bundler" / "node16", replace this with `import Stripe from 'stripe'`.
 import { Stripe } from 'stripe/cjs/stripe.core.js'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
@@ -52,6 +57,9 @@ function evaluateReview(
   }
   if (!shipping.shippingLine1) {
     return { needsReview: true, reviewReason: 'Sin dirección de envío' }
+  }
+  if (!shipping.shippingCity) {
+    return { needsReview: true, reviewReason: 'Sin ciudad' }
   }
   if (!shipping.shippingNeighborhood) {
     return { needsReview: true, reviewReason: 'Sin colonia' }
