@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, X, Package, Truck, CheckCircle, Clock, ChevronDown, MapPin, Phone } from 'lucide-react'
+import { Search, X, Package, Truck, CheckCircle, Clock, ChevronDown, MapPin, Phone, RefreshCw, AlertTriangle } from 'lucide-react'
 import Image from 'next/image'
 import { getOrders, updateOrderFulfillment } from '@/lib/server-actions'
 import toast from 'react-hot-toast'
@@ -207,11 +207,30 @@ export default function OrdersTab() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedOrder, setSelectedOrder] = useState(null)
+  const [reviewOnly, setReviewOnly] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
+
+  const handleSync = async () => {
+    setIsSyncing(true)
+    try {
+      const res = await fetch('/api/admin/stripe-sync', { method: 'POST' })
+      if (!res.ok) throw new Error(await res.text())
+      const data = await res.json()
+      toast.success(
+        `${data.created} creadas, ${data.flagged} para revisar, ${data.skipped} ya existentes`
+      )
+      await loadOrders()
+    } catch (err) {
+      toast.error('Error al sincronizar con Stripe')
+    } finally {
+      setIsSyncing(false)
+    }
+  }
 
   const loadOrders = async () => {
     setIsLoading(true)
     try {
-      const data = await getOrders({ search: search || undefined, status: statusFilter })
+      const data = await getOrders({ search: search || undefined, status: statusFilter, reviewOnly })
       setOrders(data)
     } catch {
       toast.error('Error al cargar pedidos')
@@ -220,7 +239,7 @@ export default function OrdersTab() {
     }
   }
 
-  useEffect(() => { loadOrders() }, [search, statusFilter])
+  useEffect(() => { loadOrders() }, [search, statusFilter, reviewOnly])
 
   const handleModalClose = (didSave) => {
     setSelectedOrder(null)
@@ -234,6 +253,14 @@ export default function OrdersTab() {
           <h2 className="font-serif text-2xl text-stone-800">Pedidos</h2>
           <p className="text-[10px] text-stone-400 uppercase tracking-widest mt-1">{orders.length} pedido{orders.length !== 1 ? 's' : ''}</p>
         </div>
+        <button
+          onClick={handleSync}
+          disabled={isSyncing}
+          className="inline-flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold border border-stone-300 px-3 py-2 rounded-lg hover:bg-stone-50 disabled:opacity-50"
+        >
+          <RefreshCw size={12} className={isSyncing ? 'animate-spin' : ''} />
+          {isSyncing ? 'Sincronizando…' : 'Sincronizar Stripe'}
+        </button>
       </div>
 
       {/* Filters */}
@@ -262,6 +289,17 @@ export default function OrdersTab() {
               {s.label}
             </button>
           ))}
+          <button
+            onClick={() => setReviewOnly(!reviewOnly)}
+            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all inline-flex items-center gap-1 ${
+              reviewOnly
+                ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                : 'bg-white border border-stone-300 text-stone-600 hover:border-amber-300'
+            }`}
+          >
+            <AlertTriangle size={11} />
+            Revisar
+          </button>
         </div>
       </div>
 
