@@ -230,4 +230,125 @@ describe('getOrders', () => {
       expect(result.collections.length).toBe(2)
     })
   })
+
+  describe('date range filter', () => {
+    it('filters orders by dateFrom', async () => {
+      const product = await prisma.product.create({
+        data: { name: 'Test', price: 100, stock: 10, collection: 'Col', image: 'https://example.com/test.jpg', color: 'red', design: 'classic' },
+      })
+      const date1 = new Date('2026-05-01T10:00:00Z')
+      const date2 = new Date('2026-05-15T10:00:00Z')
+
+      await prisma.order.create({
+        data: {
+          productId: product.id,
+          total: 100,
+          customerName: 'John',
+          customerEmail: 'john@example.com',
+          stripeSessionId: 'sess_1',
+          status: 'succeeded',
+          createdAt: date1,
+        },
+      })
+      await prisma.order.create({
+        data: {
+          productId: product.id,
+          total: 100,
+          customerName: 'Jane',
+          customerEmail: 'jane@example.com',
+          stripeSessionId: 'sess_2',
+          status: 'succeeded',
+          createdAt: date2,
+        },
+      })
+
+      const result = await getOrders({ dateFrom: '2026-05-10' })
+      expect(result.orders).toHaveLength(1)
+      expect(result.orders[0].customerName).toBe('Jane')
+    })
+
+    it('filters orders by dateTo', async () => {
+      const product = await prisma.product.create({
+        data: { name: 'Test', price: 100, stock: 10, collection: 'Col', image: 'https://example.com/test.jpg', color: 'red', design: 'classic' },
+      })
+      const date1 = new Date('2026-05-01T10:00:00Z')
+      const date2 = new Date('2026-05-15T10:00:00Z')
+
+      await prisma.order.create({
+        data: {
+          productId: product.id,
+          total: 100,
+          customerName: 'John',
+          customerEmail: 'john@example.com',
+          stripeSessionId: 'sess_1',
+          status: 'succeeded',
+          createdAt: date1,
+        },
+      })
+      await prisma.order.create({
+        data: {
+          productId: product.id,
+          total: 100,
+          customerName: 'Jane',
+          customerEmail: 'jane@example.com',
+          stripeSessionId: 'sess_2',
+          status: 'succeeded',
+          createdAt: date2,
+        },
+      })
+
+      const result = await getOrders({ dateTo: '2026-05-10' })
+      expect(result.orders).toHaveLength(1)
+      expect(result.orders[0].customerName).toBe('John')
+    })
+
+    it('filters orders by dateFrom and dateTo combined', async () => {
+      const product = await prisma.product.create({
+        data: { name: 'Test', price: 100, stock: 10, collection: 'Col', image: 'https://example.com/test.jpg', color: 'red', design: 'classic' },
+      })
+      const dates = [
+        new Date('2026-05-01T10:00:00Z'),
+        new Date('2026-05-10T10:00:00Z'),
+        new Date('2026-05-20T10:00:00Z'),
+      ]
+
+      for (let i = 0; i < 3; i++) {
+        await prisma.order.create({
+          data: {
+            productId: product.id,
+            total: 100,
+            customerName: `Customer${i}`,
+            customerEmail: `cust${i}@example.com`,
+            stripeSessionId: `sess_${i}`,
+            status: 'succeeded',
+            createdAt: dates[i],
+          },
+        })
+      }
+
+      const result = await getOrders({ dateFrom: '2026-05-05', dateTo: '2026-05-15' })
+      expect(result.orders).toHaveLength(1)
+      expect(result.orders[0].customerName).toBe('Customer1')
+    })
+
+    it('ignores dateTo if dateFrom > dateTo', async () => {
+      const product = await prisma.product.create({
+        data: { name: 'Test', price: 100, stock: 10, collection: 'Col', image: 'https://example.com/test.jpg', color: 'red', design: 'classic' },
+      })
+      await prisma.order.create({
+        data: {
+          productId: product.id,
+          total: 100,
+          customerName: 'John',
+          customerEmail: 'john@example.com',
+          stripeSessionId: 'sess_1',
+          status: 'succeeded',
+          createdAt: new Date('2026-05-10T10:00:00Z'),
+        },
+      })
+
+      const result = await getOrders({ dateFrom: '2026-05-15', dateTo: '2026-05-10' })
+      expect(result.orders).toHaveLength(0)
+    })
+  })
 })
