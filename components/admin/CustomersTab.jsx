@@ -9,6 +9,18 @@ import toast from 'react-hot-toast'
 
 const VIP_THRESHOLD = 10000 // MXN
 
+function formatAddress(address) {
+  if (!address) return ''
+  const parts = [
+    address.line1,
+    address.line2,
+    [address.city, address.state].filter(Boolean).join(', '),
+    address.postalCode,
+    address.country,
+  ].filter(Boolean)
+  return parts.join(', ')
+}
+
 function CustomerDetailModal({ customer, onClose }) {
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
@@ -57,6 +69,29 @@ function CustomerDetailModal({ customer, onClose }) {
                 {new Date(customer.lastPurchase).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: '2-digit' })}
               </p>
             </div>
+          </div>
+
+          {/* Last shipping address */}
+          <div className="p-4 bg-stone-50 rounded-xl border border-stone-100">
+            <p className="text-[9px] uppercase tracking-widest text-stone-400 font-bold mb-2">Última Dirección de Envío</p>
+            {customer.lastShippingAddress && customer.lastShippingAddress.line1 ? (
+              <>
+                {customer.lastShippingAddress.name && (
+                  <p className="text-xs text-stone-700 font-medium">{customer.lastShippingAddress.name}</p>
+                )}
+                <p className="text-xs text-stone-600 mt-1 leading-relaxed">{formatAddress(customer.lastShippingAddress)}</p>
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formatAddress(customer.lastShippingAddress))}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-block mt-2 text-[10px] font-bold uppercase tracking-widest text-amber-700 hover:text-amber-900"
+                >
+                  Abrir en Google Maps
+                </a>
+              </>
+            ) : (
+              <p className="text-xs text-stone-400">Sin dirección registrada</p>
+            )}
           </div>
 
           {/* Order history */}
@@ -165,6 +200,7 @@ export default function CustomersTab() {
                   <th className="text-left px-4 py-3 text-[9px] font-bold uppercase tracking-widest text-stone-400">Cliente</th>
                   <th className="text-left px-4 py-3 text-[9px] font-bold uppercase tracking-widest text-stone-400">Pedidos</th>
                   <th className="text-left px-4 py-3 text-[9px] font-bold uppercase tracking-widest text-stone-400">Total Gastado</th>
+                  <th className="text-left px-4 py-3 text-[9px] font-bold uppercase tracking-widest text-stone-400 hidden lg:table-cell">Última Dirección</th>
                   <th className="text-left px-4 py-3 text-[9px] font-bold uppercase tracking-widest text-stone-400 hidden md:table-cell">Última Compra</th>
                   <th className="px-4 py-3"></th>
                 </tr>
@@ -187,6 +223,11 @@ export default function CustomersTab() {
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-stone-800 font-medium text-xs">${customer.totalSpent.toLocaleString('es-MX')} <span className="text-stone-400 text-[9px]">MXN</span></span>
+                    </td>
+                    <td className="px-4 py-3 hidden lg:table-cell max-w-[260px]">
+                      <span className="text-stone-500 text-xs line-clamp-2">
+                        {formatAddress(customer.lastShippingAddress) || 'Sin dirección'}
+                      </span>
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell">
                       <span className="text-stone-400 text-xs">

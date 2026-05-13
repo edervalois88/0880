@@ -577,12 +577,23 @@ export async function getCustomers() {
 
     const map = new Map<string, any>()
     for (const order of orders) {
+      const shippingAddress = {
+        name: order.shippingName || null,
+        line1: order.shippingAddressLine1 || null,
+        line2: order.shippingAddressLine2 || null,
+        city: order.shippingCity || null,
+        state: order.shippingState || null,
+        postalCode: order.shippingPostalCode || null,
+        country: order.shippingCountry || null,
+      }
+
       const existing = map.get(order.customerEmail)
       if (existing) {
         existing.orderCount += 1
         existing.totalSpent += order.total
         if (order.createdAt > existing.lastPurchase) {
           existing.lastPurchase = order.createdAt
+          existing.lastShippingAddress = shippingAddress
         }
         existing.orders.push(order)
       } else {
@@ -591,6 +602,7 @@ export async function getCustomers() {
           orderCount: 1,
           totalSpent: order.total,
           lastPurchase: order.createdAt,
+          lastShippingAddress: shippingAddress,
           orders: [order],
         })
       }
