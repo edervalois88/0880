@@ -46,3 +46,7 @@ next-env.d.ts
 *.njsproj
 *.sln
 *.sw?
+
+# Claude Code local tooling artifacts (not part of the app)
+.claude/
+.claire/
