@@ -9,6 +9,11 @@ const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
 });
 
 export async function POST(req: NextRequest) {
+  if (!env.STRIPE_WEBHOOK_SECRET) {
+    logger.error('[stripe-webhook] STRIPE_WEBHOOK_SECRET no está configurado');
+    return NextResponse.json({ error: 'Webhook no configurado' }, { status: 500 });
+  }
+
   const body = await req.text();
   const signature = req.headers.get('stripe-signature');
 
