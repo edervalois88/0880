@@ -38,6 +38,23 @@ export async function POST(req: NextRequest) {
       shipping_address_collection: {
         allowed_countries: ['MX'],
       },
+      locale: 'es-419',
+      custom_fields: [
+        {
+          key: 'colonia',
+          label: { type: 'custom', custom: 'Colonia' },
+          type: 'text',
+          optional: false,
+          text: { minimum_length: 2, maximum_length: 80 },
+        },
+        {
+          key: 'referencias',
+          label: { type: 'custom', custom: 'Referencias / Entre calles (opcional)' },
+          type: 'text',
+          optional: true,
+          text: { maximum_length: 200 },
+        },
+      ],
       line_items: [
         {
           price_data: {
