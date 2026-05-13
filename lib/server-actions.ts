@@ -502,13 +502,14 @@ export async function toggleProductVisibility(id: number, published: boolean) {
 }
 
 // PEDIDOS
-export async function getOrders(filters?: { search?: string; status?: string }) {
+export async function getOrders(filters?: { search?: string; status?: string; reviewOnly?: boolean }) {
   await ensureAdmin()
   try {
     return await prisma.order.findMany({
       where: {
         ...(filters?.search ? { customerEmail: { contains: filters.search, mode: 'insensitive' } } : {}),
         ...(filters?.status && filters.status !== 'all' ? { shippingStatus: filters.status } : {}),
+        ...(filters?.reviewOnly ? { needsReview: true } : {}),
       },
       orderBy: { createdAt: 'desc' },
       include: { product: { select: { name: true, image: true, collection: true } } },
