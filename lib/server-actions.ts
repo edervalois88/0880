@@ -530,6 +530,22 @@ export async function getOrders(filters?: { search?: string; status?: string; re
       where.needsReview = true
     }
 
+    // Date range filter
+    if (filters?.dateFrom || filters?.dateTo) {
+      where.createdAt = {}
+      if (filters?.dateFrom) {
+        where.createdAt.gte = new Date(filters.dateFrom)
+      }
+      // Only apply dateTo if dateFrom <= dateTo
+      if (filters?.dateTo) {
+        const dateFrom = filters?.dateFrom ? new Date(filters.dateFrom) : null
+        const dateTo = new Date(filters.dateTo)
+        if (!dateFrom || dateFrom <= dateTo) {
+          where.createdAt.lte = dateTo
+        }
+      }
+    }
+
     const orders = await prisma.order.findMany({
       where,
       orderBy: { createdAt: 'desc' },
