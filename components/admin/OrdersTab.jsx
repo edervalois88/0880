@@ -331,9 +331,25 @@ export default function OrdersTab() {
               </thead>
               <tbody>
                 {orders.map(order => (
-                  <tr key={order.id} className="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
+                  <tr
+                    key={order.id}
+                    className={`border-b border-stone-50 hover:bg-stone-50/50 transition-colors ${
+                      order.needsReview ? 'bg-amber-50/50' : ''
+                    }`}
+                  >
                     <td className="px-4 py-3">
-                      <span className="font-mono text-[10px] text-stone-500">#{order.stripeSessionId.slice(-8).toUpperCase()}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[10px] text-stone-500">#{order.stripeSessionId.slice(-8).toUpperCase()}</span>
+                        {order.needsReview && (
+                          <span
+                            title={order.reviewReason || 'Requiere revisión'}
+                            className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest"
+                          >
+                            <AlertTriangle size={9} />
+                            Revisar
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
