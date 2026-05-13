@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { prisma } from '@/lib/prisma';
+import { env } from '@/lib/env';
+import { logger } from '@/lib/logger';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
   apiVersion: '2026-03-25.dahlia',
 });
 
@@ -29,7 +31,7 @@ export async function POST(req: NextRequest) {
     // Asegurar que la imagen sea una URL completa
     const imageUrl = product.image?.startsWith('http') ? product.image : `${baseUrl}${product.image}`;
 
-    console.log('Iniciando Checkout para:', { name: product.name, amount, imageUrl, baseUrl });
+    logger.info(`[stripe-checkout] creating session for product ${product.id} (${product.name}), amount=${amount}`);
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -78,7 +80,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ url: session.url });
   } catch (error: any) {
-    console.error('CRITICAL: Stripe Checkout Error:', error.message);
+    logger.error(`[stripe-checkout] error: ${error.message}`);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

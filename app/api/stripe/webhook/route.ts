@@ -1,20 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { env } from '@/lib/env';
 import { logger } from '@/lib/logger';
 import { recordPaidSession } from '@/lib/stripe-sync';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
   apiVersion: '2026-03-25.dahlia',
 });
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
 export async function POST(req: NextRequest) {
-  if (!webhookSecret) {
-    logger.error('[stripe-webhook] STRIPE_WEBHOOK_SECRET no está configurado');
-    return NextResponse.json({ error: 'Webhook no configurado' }, { status: 500 });
-  }
-
   const body = await req.text();
   const signature = req.headers.get('stripe-signature');
 
@@ -24,7 +18,7 @@ export async function POST(req: NextRequest) {
 
   let event: any;
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    event = stripe.webhooks.constructEvent(body, signature, env.STRIPE_WEBHOOK_SECRET);
   } catch (err: any) {
     logger.error(`[stripe-webhook] signature verification failed: ${err.message}`);
     return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 });

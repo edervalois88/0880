@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { auth } from '@/auth'
 import { recordPaidSession, type RecordResult } from '@/lib/stripe-sync'
+import { env } from '@/lib/env'
 import { logger } from '@/lib/logger'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
   apiVersion: '2026-03-25.dahlia',
 })
 
@@ -39,7 +40,9 @@ export async function POST() {
   for (const s of sessions.data) {
     if (s.payment_status !== 'paid') continue
     try {
-      const full = await stripe.checkout.sessions.retrieve(s.id)
+      const full = await stripe.checkout.sessions.retrieve(s.id, {
+        expand: ['customer_details', 'shipping_details'],
+      })
       results.push(await recordPaidSession(full as any))
     } catch (err: any) {
       logger.error(`[stripe-sync-admin] failed to process ${s.id}: ${err.message}`)
