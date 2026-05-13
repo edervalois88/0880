@@ -221,9 +221,11 @@ function OrderDetailModal({ order, onClose }) {
 
 export default function OrdersTab() {
   const [orders, setOrders] = useState([])
+  const [collections, setCollections] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [collectionFilter, setCollectionFilter] = useState('')
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [reviewOnly, setReviewOnly] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
@@ -248,8 +250,9 @@ export default function OrdersTab() {
   const loadOrders = async () => {
     setIsLoading(true)
     try {
-      const data = await getOrders({ search: search || undefined, status: statusFilter, reviewOnly })
-      setOrders(data)
+      const data = await getOrders({ search: search || undefined, status: statusFilter, reviewOnly, collection: collectionFilter || undefined })
+      setOrders(data.orders)
+      setCollections(data.collections)
     } catch {
       toast.error('Error al cargar pedidos')
     } finally {
@@ -257,7 +260,7 @@ export default function OrdersTab() {
     }
   }
 
-  useEffect(() => { loadOrders() }, [search, statusFilter, reviewOnly])
+  useEffect(() => { loadOrders() }, [search, statusFilter, reviewOnly, collectionFilter])
 
   const handleModalClose = (didSave) => {
     setSelectedOrder(null)
@@ -282,16 +285,31 @@ export default function OrdersTab() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1 max-w-xs">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por email..."
-            className="w-full pl-9 pr-4 py-2 border border-stone-300 rounded-lg text-sm outline-none focus:border-amber-500"
-          />
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1 max-w-xs">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por email..."
+              className="w-full pl-9 pr-4 py-2 border border-stone-300 rounded-lg text-sm outline-none focus:border-amber-500"
+            />
+          </div>
+          <div className="relative max-w-xs">
+            <select
+              value={collectionFilter}
+              onChange={(e) => setCollectionFilter(e.target.value)}
+              className="w-full border border-stone-300 rounded-lg px-4 py-2 text-sm outline-none focus:border-amber-500 bg-white appearance-none pr-10"
+            >
+              <option value="">Todas las colecciones</option>
+              {collections.map(coll => (
+                <option key={coll} value={coll}>{coll}</option>
+              ))}
+            </select>
+            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
+          </div>
         </div>
         <div className="flex gap-2 flex-wrap">
           {SHIPPING_STATUSES.map(s => (
