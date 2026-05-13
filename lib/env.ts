@@ -12,6 +12,8 @@ const envSchema = z.object({
   CLOUDINARY_API_KEY: z.string().optional(),
   CLOUDINARY_API_SECRET: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
+  STRIPE_SECRET_KEY: z.string().startsWith('sk_', 'STRIPE_SECRET_KEY must start with sk_'),
+  STRIPE_WEBHOOK_SECRET: z.string().startsWith('whsec_', 'STRIPE_WEBHOOK_SECRET must start with whsec_'),
 })
 
 const parsedEnv = envSchema.safeParse(process.env)
@@ -37,4 +39,6 @@ export const env = {
   CLOUDINARY_API_KEY: parsedEnv.data.CLOUDINARY_API_KEY,
   CLOUDINARY_API_SECRET: parsedEnv.data.CLOUDINARY_API_SECRET,
   RESEND_API_KEY: parsedEnv.data.RESEND_API_KEY,
+  STRIPE_SECRET_KEY: parsedEnv.data.STRIPE_SECRET_KEY,
+  STRIPE_WEBHOOK_SECRET: parsedEnv.data.STRIPE_WEBHOOK_SECRET,
 }
