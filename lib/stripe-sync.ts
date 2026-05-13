@@ -35,7 +35,9 @@ function extractShippingData(session: Stripe.Checkout.Session) {
     shippingState: address.state ?? null,
     shippingPostalCode: address.postal_code ?? null,
     shippingCountry: address.country ?? null,
-    shippingNeighborhood: cf.colonia ?? null,
+    // Stripe's MX address form labels line2 as "Colonia". We mirror it
+    // into shippingNeighborhood so the admin UI can render "Col. X" cleanly.
+    shippingNeighborhood: address.line2 ?? null,
     shippingReferences: cf.referencias ?? null,
   }
 }

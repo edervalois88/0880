@@ -41,12 +41,15 @@ function StatusBadge({ status }) {
 }
 
 function formatAddress(order) {
+  const isMx = order.shippingCountry === 'MX'
+  // For MX, Stripe stores Colonia in line2 (relabeled in the localized form).
+  // We render it as "Col. X". Outside MX, line2 is generic (apartment/suite).
+  const line2 = order.shippingLine2 || order.shippingNeighborhood
   return [
     order.shippingLine1,
-    order.shippingLine2,
-    order.shippingNeighborhood ? `Col. ${order.shippingNeighborhood}` : null,
+    line2 ? (isMx ? `Col. ${line2}` : line2) : null,
     [order.shippingPostalCode, order.shippingCity, order.shippingState].filter(Boolean).join(' '),
-    order.shippingCountry === 'MX' ? 'México' : order.shippingCountry,
+    isMx ? 'México' : order.shippingCountry,
   ].filter(Boolean)
 }
 

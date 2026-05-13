@@ -43,13 +43,6 @@ export async function POST(req: NextRequest) {
       locale: 'es-419',
       custom_fields: [
         {
-          key: 'colonia',
-          label: { type: 'custom', custom: 'Colonia' },
-          type: 'text',
-          optional: false,
-          text: { minimum_length: 2, maximum_length: 80 },
-        },
-        {
           key: 'referencias',
           label: { type: 'custom', custom: 'Referencias / Entre calles (opcional)' },
           type: 'text',
