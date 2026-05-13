@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, X, Package, Truck, CheckCircle, Clock, ChevronDown } from 'lucide-react'
+import { Search, X, Package, Truck, CheckCircle, Clock, ChevronDown, MapPin, Phone, RefreshCw, AlertTriangle } from 'lucide-react'
 import Image from 'next/image'
 import { getOrders, updateOrderFulfillment } from '@/lib/server-actions'
 import toast from 'react-hot-toast'
@@ -38,6 +38,16 @@ function StatusBadge({ status }) {
       {STATUS_LABELS[status] || status}
     </span>
   )
+}
+
+function formatAddress(order) {
+  return [
+    order.shippingLine1,
+    order.shippingLine2,
+    order.shippingNeighborhood ? `Col. ${order.shippingNeighborhood}` : null,
+    [order.shippingPostalCode, order.shippingCity, order.shippingState].filter(Boolean).join(' '),
+    order.shippingCountry === 'MX' ? 'México' : order.shippingCountry,
+  ].filter(Boolean)
 }
 
 function OrderDetailModal({ order, onClose }) {
@@ -86,6 +96,15 @@ function OrderDetailModal({ order, onClose }) {
         </div>
 
         <div className="p-6 space-y-5">
+          {order.needsReview && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3">
+              <AlertTriangle size={16} className="text-amber-700 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-amber-800">Requiere revisión</p>
+                <p className="text-xs text-amber-900 mt-0.5">{order.reviewReason || 'Sin razón registrada'}</p>
+              </div>
+            </div>
+          )}
           {/* Product */}
           <div className="flex gap-4 items-center p-4 bg-stone-50 rounded-xl border border-stone-100">
             {order.product?.image && (
@@ -103,10 +122,41 @@ function OrderDetailModal({ order, onClose }) {
           {/* Customer */}
           <div>
             <p className="text-[9px] uppercase tracking-widest text-stone-400 mb-1">Cliente</p>
+            {order.customerName && <p className="text-sm text-stone-800">{order.customerName}</p>}
             <p className="text-sm text-stone-800">{order.customerEmail}</p>
+            {order.customerPhone && (
+              <p className="text-xs text-stone-500 mt-1 flex items-center gap-1.5">
+                <Phone size={12} />
+                {order.customerPhone}
+              </p>
+            )}
             <p className="text-[10px] text-stone-400 mt-0.5">
               {new Date(order.createdAt).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
             </p>
+          </div>
+
+          {/* Shipping address */}
+          <div>
+            <p className="text-[9px] uppercase tracking-widest text-stone-400 mb-1">Dirección de Envío</p>
+            {formatAddress(order).length > 0 ? (
+              <div className="text-sm text-stone-700 leading-relaxed">
+                {order.shippingName && order.shippingName !== order.customerName && (
+                  <p className="font-medium text-stone-800">{order.shippingName}</p>
+                )}
+                {formatAddress(order).map((line, index) => (
+                  <p key={index}>{line}</p>
+                ))}
+                {order.shippingReferences && (
+                  <p className="text-xs text-stone-500 italic mt-2">
+                    Referencias: {order.shippingReferences}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                Sin dirección registrada. Verifica que el pedido se haya creado con la nueva configuración de Stripe.
+              </p>
+            )}
           </div>
 
           <form onSubmit={handleSave} className="space-y-4">
@@ -172,11 +222,30 @@ export default function OrdersTab() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedOrder, setSelectedOrder] = useState(null)
+  const [reviewOnly, setReviewOnly] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
+
+  const handleSync = async () => {
+    setIsSyncing(true)
+    try {
+      const res = await fetch('/api/admin/stripe-sync', { method: 'POST' })
+      if (!res.ok) throw new Error(await res.text())
+      const data = await res.json()
+      toast.success(
+        `${data.created} creadas, ${data.flagged} para revisar, ${data.skipped} ya existentes`
+      )
+      await loadOrders()
+    } catch (err) {
+      toast.error('Error al sincronizar con Stripe')
+    } finally {
+      setIsSyncing(false)
+    }
+  }
 
   const loadOrders = async () => {
     setIsLoading(true)
     try {
-      const data = await getOrders({ search: search || undefined, status: statusFilter })
+      const data = await getOrders({ search: search || undefined, status: statusFilter, reviewOnly })
       setOrders(data)
     } catch {
       toast.error('Error al cargar pedidos')
@@ -185,7 +254,7 @@ export default function OrdersTab() {
     }
   }
 
-  useEffect(() => { loadOrders() }, [search, statusFilter])
+  useEffect(() => { loadOrders() }, [search, statusFilter, reviewOnly])
 
   const handleModalClose = (didSave) => {
     setSelectedOrder(null)
@@ -199,6 +268,14 @@ export default function OrdersTab() {
           <h2 className="font-serif text-2xl text-stone-800">Pedidos</h2>
           <p className="text-[10px] text-stone-400 uppercase tracking-widest mt-1">{orders.length} pedido{orders.length !== 1 ? 's' : ''}</p>
         </div>
+        <button
+          onClick={handleSync}
+          disabled={isSyncing}
+          className="inline-flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold border border-stone-300 px-3 py-2 rounded-lg hover:bg-stone-50 disabled:opacity-50"
+        >
+          <RefreshCw size={12} className={isSyncing ? 'animate-spin' : ''} />
+          {isSyncing ? 'Sincronizando…' : 'Sincronizar Stripe'}
+        </button>
       </div>
 
       {/* Filters */}
@@ -227,6 +304,17 @@ export default function OrdersTab() {
               {s.label}
             </button>
           ))}
+          <button
+            onClick={() => setReviewOnly(!reviewOnly)}
+            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all inline-flex items-center gap-1 ${
+              reviewOnly
+                ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                : 'bg-white border border-stone-300 text-stone-600 hover:border-amber-300'
+            }`}
+          >
+            <AlertTriangle size={11} />
+            Revisar
+          </button>
         </div>
       </div>
 
@@ -249,6 +337,7 @@ export default function OrdersTab() {
                   <th className="text-left px-4 py-3 text-[9px] font-bold uppercase tracking-widest text-stone-400">Pedido</th>
                   <th className="text-left px-4 py-3 text-[9px] font-bold uppercase tracking-widest text-stone-400">Producto</th>
                   <th className="text-left px-4 py-3 text-[9px] font-bold uppercase tracking-widest text-stone-400 hidden md:table-cell">Cliente</th>
+                  <th className="text-left px-4 py-3 text-[9px] font-bold uppercase tracking-widest text-stone-400 hidden xl:table-cell">Dirección</th>
                   <th className="text-left px-4 py-3 text-[9px] font-bold uppercase tracking-widest text-stone-400">Total</th>
                   <th className="text-left px-4 py-3 text-[9px] font-bold uppercase tracking-widest text-stone-400">Envío</th>
                   <th className="text-left px-4 py-3 text-[9px] font-bold uppercase tracking-widest text-stone-400 hidden lg:table-cell">Fecha</th>
@@ -257,9 +346,25 @@ export default function OrdersTab() {
               </thead>
               <tbody>
                 {orders.map(order => (
-                  <tr key={order.id} className="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
+                  <tr
+                    key={order.id}
+                    className={`border-b border-stone-50 hover:bg-stone-50/50 transition-colors ${
+                      order.needsReview ? 'bg-amber-50/50' : ''
+                    }`}
+                  >
                     <td className="px-4 py-3">
-                      <span className="font-mono text-[10px] text-stone-500">#{order.stripeSessionId.slice(-8).toUpperCase()}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[10px] text-stone-500">#{order.stripeSessionId.slice(-8).toUpperCase()}</span>
+                        {order.needsReview && (
+                          <span
+                            title={order.reviewReason || 'Requiere revisión'}
+                            className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest"
+                          >
+                            <AlertTriangle size={9} />
+                            Revisar
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
@@ -272,7 +377,22 @@ export default function OrdersTab() {
                       </div>
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell">
-                      <span className="text-stone-500 text-xs">{order.customerEmail}</span>
+                      <div className="space-y-0.5">
+                        {order.customerName && <p className="text-stone-800 text-xs">{order.customerName}</p>}
+                        <p className="text-stone-500 text-xs">{order.customerEmail}</p>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 hidden xl:table-cell">
+                      {formatAddress(order).length > 0 ? (
+                        <div className="flex items-start gap-2 max-w-[260px]">
+                          <MapPin size={12} className="text-stone-400 mt-0.5 shrink-0" />
+                          <span className="text-stone-500 text-xs leading-relaxed line-clamp-2">
+                            {formatAddress(order).join(', ')}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-amber-700 text-[10px] uppercase tracking-widest">Pendiente</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-stone-800 font-medium text-xs">${order.total.toLocaleString('es-MX')}</span>
