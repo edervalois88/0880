@@ -1,11 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, X, Package, Truck, CheckCircle, Clock, ChevronDown, MapPin, Phone, RefreshCw, AlertTriangle } from 'lucide-react'
+import { Search, X, Package, Truck, CheckCircle, Clock, ChevronDown, MapPin, Phone, RefreshCw, AlertTriangle, Download } from 'lucide-react'
 import Image from 'next/image'
 import { getOrders, updateOrderFulfillment } from '@/lib/server-actions'
 import toast from 'react-hot-toast'
+import DatePicker from 'react-datepicker'
+import 'react-datepicker/dist/react-datepicker.css'
 
 const SHIPPING_STATUSES = [
   { value: 'all', label: 'Todos' },
@@ -90,7 +92,7 @@ function OrderDetailModal({ order, onClose }) {
           <div>
             <h3 className="font-serif text-xl text-stone-800">Detalle del Pedido</h3>
             <p className="text-[10px] text-stone-500 uppercase tracking-widest mt-1 font-mono">
-              #{order.stripeSessionId.slice(-8).toUpperCase()}
+              {`#0880-${String(order.orderNumber).padStart(5, '0')}`}
             </p>
           </div>
           <button onClick={() => onClose(false)} className="text-stone-400 hover:text-stone-800 bg-white p-1.5 rounded-full border border-stone-200">
@@ -226,6 +228,8 @@ export default function OrdersTab() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [collectionFilter, setCollectionFilter] = useState('')
+  const [dateFrom, setDateFrom] = useState(null)
+  const [dateTo, setDateTo] = useState(null)
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [reviewOnly, setReviewOnly] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
@@ -247,20 +251,30 @@ export default function OrdersTab() {
     }
   }
 
-  const loadOrders = async () => {
-    setIsLoading(true)
-    try {
-      const data = await getOrders({ search: search || undefined, status: statusFilter, reviewOnly, collection: collectionFilter || undefined })
-      setOrders(data.orders)
-      setCollections(data.collections)
-    } catch {
-      toast.error('Error al cargar pedidos')
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const loadOrders = useCallback(
+    async (filterObj = {}) => {
+      setIsLoading(true)
+      try {
+        const data = await getOrders({
+          search: filterObj.search !== undefined ? filterObj.search : search || undefined,
+          status: filterObj.status !== undefined ? filterObj.status : statusFilter,
+          reviewOnly: filterObj.reviewOnly !== undefined ? filterObj.reviewOnly : reviewOnly,
+          collection: filterObj.collection !== undefined ? filterObj.collection : collectionFilter || undefined,
+          dateFrom: filterObj.dateFrom !== undefined ? filterObj.dateFrom : (dateFrom ? dateFrom.toISOString().split('T')[0] : ''),
+          dateTo: filterObj.dateTo !== undefined ? filterObj.dateTo : (dateTo ? dateTo.toISOString().split('T')[0] : ''),
+        })
+        setOrders(data.orders)
+        setCollections(data.collections)
+      } catch {
+        toast.error('Error al cargar pedidos')
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [search, statusFilter, reviewOnly, collectionFilter, dateFrom, dateTo]
+  )
 
-  useEffect(() => { loadOrders() }, [search, statusFilter, reviewOnly, collectionFilter])
+  useEffect(() => { loadOrders() }, [search, statusFilter, reviewOnly, collectionFilter, dateFrom, dateTo, loadOrders])
 
   const handleModalClose = (didSave) => {
     setSelectedOrder(null)
@@ -274,20 +288,39 @@ export default function OrdersTab() {
           <h2 className="font-serif text-2xl text-stone-800">Pedidos</h2>
           <p className="text-[10px] text-stone-400 uppercase tracking-widest mt-1">{orders.length} pedido{orders.length !== 1 ? 's' : ''}</p>
         </div>
-        <button
-          onClick={handleSync}
-          disabled={isSyncing}
-          className="inline-flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold border border-stone-300 px-3 py-2 rounded-lg hover:bg-stone-50 disabled:opacity-50"
-        >
-          <RefreshCw size={12} className={isSyncing ? 'animate-spin' : ''} />
-          {isSyncing ? 'Sincronizando…' : 'Sincronizar Stripe'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              const params = new URLSearchParams()
+              if (search) params.append('search', search)
+              if (collectionFilter) params.append('collection', collectionFilter)
+              if (dateFrom) params.append('dateFrom', dateFrom.toISOString().split('T')[0])
+              if (dateTo) params.append('dateTo', dateTo.toISOString().split('T')[0])
+              if (reviewOnly) params.append('reviewOnly', 'true')
+
+              window.location.href = `/api/admin/orders/export?${params.toString()}`
+            }}
+            className="inline-flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold border border-green-500 bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 hover:border-green-600"
+            title="Descarga todos los pedidos filtrados"
+          >
+            <Download size={12} />
+            CSV
+          </button>
+          <button
+            onClick={handleSync}
+            disabled={isSyncing}
+            className="inline-flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold border border-stone-300 px-3 py-2 rounded-lg hover:bg-stone-50 disabled:opacity-50"
+          >
+            <RefreshCw size={12} className={isSyncing ? 'animate-spin' : ''} />
+            {isSyncing ? 'Sincronizando…' : 'Sincronizar Stripe'}
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
       <div className="flex flex-col gap-3">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1 max-w-xs">
+        <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+          <div className="relative flex-1 min-w-[200px]">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
             <input
               type="text"
@@ -297,19 +330,52 @@ export default function OrdersTab() {
               className="w-full pl-9 pr-4 py-2 border border-stone-300 rounded-lg text-sm outline-none focus:border-amber-500"
             />
           </div>
-          <div className="relative max-w-xs">
+          <div className="relative min-w-[180px]">
+            <label className="block text-[9px] font-semibold text-stone-600 mb-1">Desde</label>
+            <DatePicker
+              selected={dateFrom}
+              onChange={(date) => setDateFrom(date)}
+              placeholderText="Desde"
+              dateFormat="dd/MM/yyyy"
+              className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500"
+            />
+          </div>
+          <div className="relative min-w-[180px]">
+            <label className="block text-[9px] font-semibold text-stone-600 mb-1">Hasta</label>
+            <DatePicker
+              selected={dateTo}
+              onChange={(date) => setDateTo(date)}
+              placeholderText="Hasta"
+              dateFormat="dd/MM/yyyy"
+              className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500"
+            />
+          </div>
+          <div className="relative min-w-[180px]">
+            <label className="block text-[9px] font-semibold text-stone-600 mb-1">Colección</label>
             <select
               value={collectionFilter}
               onChange={(e) => setCollectionFilter(e.target.value)}
-              className="w-full border border-stone-300 rounded-lg px-4 py-2 text-sm outline-none focus:border-amber-500 bg-white appearance-none pr-10"
+              className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-amber-500 bg-white appearance-none pr-10"
             >
               <option value="">Todas las colecciones</option>
               {collections.map(coll => (
                 <option key={coll} value={coll}>{coll}</option>
               ))}
             </select>
-            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
+            <ChevronDown size={14} className="absolute right-3 top-7 -translate-y-1/2 text-stone-400 pointer-events-none" />
           </div>
+          <button
+            onClick={() => {
+              setSearch('')
+              setDateFrom(null)
+              setDateTo(null)
+              setCollectionFilter('')
+              setReviewOnly(false)
+            }}
+            className="self-end rounded-lg bg-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-300 inline-flex items-center gap-2"
+          >
+            <X className="h-4 w-4" /> Limpiar
+          </button>
         </div>
         <div className="flex gap-2 flex-wrap">
           {SHIPPING_STATUSES.map(s => (
@@ -375,7 +441,7 @@ export default function OrdersTab() {
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-[10px] text-stone-500">#{order.stripeSessionId.slice(-8).toUpperCase()}</span>
+                        <span className="font-mono text-[10px] text-stone-500 font-semibold">{`#0880-${String(order.orderNumber).padStart(5, '0')}`}</span>
                         {order.needsReview && (
                           <span
                             title={order.reviewReason || 'Requiere revisión'}
