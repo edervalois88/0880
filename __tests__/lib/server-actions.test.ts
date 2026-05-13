@@ -60,8 +60,8 @@ describe('getOrders', () => {
       })
 
       const result = await getOrders({ search: 'Rodriguez' })
-      expect(result).toHaveLength(1)
-      expect(result[0].customerName).toBe('Alice Rodriguez')
+      expect(result.orders).toHaveLength(1)
+      expect(result.orders[0].customerName).toBe('Alice Rodriguez')
     })
 
     it('finds order by customer email substring (case-insensitive)', async () => {
@@ -89,8 +89,8 @@ describe('getOrders', () => {
       })
 
       const result = await getOrders({ search: 'example.com' })
-      expect(result).toHaveLength(1)
-      expect(result[0].customerEmail).toBe('jane@example.com')
+      expect(result.orders).toHaveLength(1)
+      expect(result.orders[0].customerEmail).toBe('jane@example.com')
     })
 
     it('finds order by customer name case-insensitive match', async () => {
@@ -118,8 +118,8 @@ describe('getOrders', () => {
       })
 
       const result = await getOrders({ search: 'wilson' })
-      expect(result).toHaveLength(1)
-      expect(result[0].customerName).toBe('Robert Wilson')
+      expect(result.orders).toHaveLength(1)
+      expect(result.orders[0].customerName).toBe('Robert Wilson')
     })
 
     it('returns empty array when no match', async () => {
@@ -147,7 +147,7 @@ describe('getOrders', () => {
       })
 
       const result = await getOrders({ search: 'nonexistent' })
-      expect(result).toHaveLength(0)
+      expect(result.orders).toHaveLength(0)
     })
 
     it('ignores search string shorter than 2 chars', async () => {
@@ -175,7 +175,59 @@ describe('getOrders', () => {
       })
 
       const result = await getOrders({ search: 'j' })
-      expect(result).toHaveLength(1) // returns all because search < 2 chars is ignored
+      expect(result.orders).toHaveLength(1) // returns all because search < 2 chars is ignored
+    })
+  })
+
+  describe('collection filter', () => {
+    it('filters orders by collection', async () => {
+      const prod1 = await prisma.product.create({
+        data: { name: 'Item A', price: 100, stock: 10, collection: 'Rings', image: 'https://example.com/a.jpg', color: 'gold', design: 'classic' },
+      })
+      const prod2 = await prisma.product.create({
+        data: { name: 'Item B', price: 200, stock: 10, collection: 'Necklaces', image: 'https://example.com/b.jpg', color: 'silver', design: 'modern' },
+      })
+      await prisma.order.create({
+        data: {
+          productId: prod1.id,
+          total: 100,
+          customerName: 'John',
+          customerEmail: 'john@example.com',
+          stripeSessionId: 'sess_1',
+          status: 'succeeded',
+        },
+      })
+      await prisma.order.create({
+        data: {
+          productId: prod2.id,
+          total: 200,
+          customerName: 'Jane',
+          customerEmail: 'jane@example.com',
+          stripeSessionId: 'sess_2',
+          status: 'succeeded',
+        },
+      })
+
+      const result = await getOrders({ collection: 'Rings' })
+      expect(result.orders).toHaveLength(1)
+      expect(result.orders[0].product.collection).toBe('Rings')
+    })
+
+    it('returns all collections as distinct list', async () => {
+      const prod1 = await prisma.product.create({
+        data: { name: 'Item A', price: 100, stock: 10, collection: 'Rings', image: 'https://example.com/a.jpg', color: 'gold', design: 'classic' },
+      })
+      const prod2 = await prisma.product.create({
+        data: { name: 'Item B', price: 200, stock: 10, collection: 'Necklaces', image: 'https://example.com/b.jpg', color: 'silver', design: 'modern' },
+      })
+      const prod3 = await prisma.product.create({
+        data: { name: 'Item C', price: 150, stock: 10, collection: 'Rings', image: 'https://example.com/c.jpg', color: 'copper', design: 'vintage' },
+      })
+
+      const result = await getOrders()
+      expect(result.collections).toContain('Rings')
+      expect(result.collections).toContain('Necklaces')
+      expect(result.collections.length).toBe(2)
     })
   })
 })
