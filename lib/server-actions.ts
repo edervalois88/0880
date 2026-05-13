@@ -502,15 +502,31 @@ export async function toggleProductVisibility(id: number, published: boolean) {
 }
 
 // PEDIDOS
-export async function getOrders(filters?: { search?: string; status?: string; reviewOnly?: boolean }) {
+export async function getOrders(filters?: { search?: string; status?: string; reviewOnly?: boolean; collection?: string; dateFrom?: string; dateTo?: string }) {
   await ensureAdmin()
   try {
+    const where: any = {}
+
+    // Search filter (min 2 characters)
+    if (filters?.search && filters.search.length >= 2) {
+      where.OR = [
+        { customerName: { contains: filters.search, mode: 'insensitive' } },
+        { customerEmail: { contains: filters.search, mode: 'insensitive' } },
+      ]
+    }
+
+    // Status filter
+    if (filters?.status && filters.status !== 'all') {
+      where.shippingStatus = filters.status
+    }
+
+    // Review only filter
+    if (filters?.reviewOnly) {
+      where.needsReview = true
+    }
+
     return await prisma.order.findMany({
-      where: {
-        ...(filters?.search ? { customerEmail: { contains: filters.search, mode: 'insensitive' } } : {}),
-        ...(filters?.status && filters.status !== 'all' ? { shippingStatus: filters.status } : {}),
-        ...(filters?.reviewOnly ? { needsReview: true } : {}),
-      },
+      where,
       orderBy: { createdAt: 'desc' },
       include: { product: { select: { name: true, image: true, collection: true } } },
       take: 100,
