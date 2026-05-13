@@ -44,8 +44,9 @@ function formatAddress(order) {
   return [
     order.shippingLine1,
     order.shippingLine2,
+    order.shippingNeighborhood ? `Col. ${order.shippingNeighborhood}` : null,
     [order.shippingPostalCode, order.shippingCity, order.shippingState].filter(Boolean).join(' '),
-    order.shippingCountry === 'MX' ? 'Mexico' : order.shippingCountry,
+    order.shippingCountry === 'MX' ? 'México' : order.shippingCountry,
   ].filter(Boolean)
 }
 
@@ -95,6 +96,15 @@ function OrderDetailModal({ order, onClose }) {
         </div>
 
         <div className="p-6 space-y-5">
+          {order.needsReview && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3">
+              <AlertTriangle size={16} className="text-amber-700 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-amber-800">Requiere revisión</p>
+                <p className="text-xs text-amber-900 mt-0.5">{order.reviewReason || 'Sin razón registrada'}</p>
+              </div>
+            </div>
+          )}
           {/* Product */}
           <div className="flex gap-4 items-center p-4 bg-stone-50 rounded-xl border border-stone-100">
             {order.product?.image && (
@@ -136,6 +146,11 @@ function OrderDetailModal({ order, onClose }) {
                 {formatAddress(order).map((line, index) => (
                   <p key={index}>{line}</p>
                 ))}
+                {order.shippingReferences && (
+                  <p className="text-xs text-stone-500 italic mt-2">
+                    Referencias: {order.shippingReferences}
+                  </p>
+                )}
               </div>
             ) : (
               <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
